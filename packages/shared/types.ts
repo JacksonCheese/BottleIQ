@@ -1,0 +1,19 @@
+export type Store = { id: string; name: string; timezone: string };
+export type User = { name: string; email: string; role: string; demo: boolean };
+export type Vendor = { id: string; name: string; default_lead_time_days: number; minimum_order_amount: number | null };
+export type Metric = {
+ product_id: string; sku: string; upc: string | null; product_name: string; brand: string; category: string; size: string;
+ vendor_id: string | null; vendor_name: string | null; units_per_case: number; snapshot_at: string | null;
+ current_quantity: number; unit_cost: number | null; retail_price: number; inventory_value: number | null; margin: number | null;
+ sales_30: number; sales_90: number; revenue_90: number; gross_profit: number | null; average_daily_demand: number; demand_std: number;
+ lead_time_days: number; safety_stock: number; reorder_point: number; target_stock: number; days_of_supply: number | null;
+ turnover: number | null; gmroi: number | null; inventory_average_estimated: boolean; sell_through: number;
+ dead: boolean; slow: boolean; stockout: boolean; abnormal_demand: boolean; abc: string; status: string;
+ recommended_units: number; recommended_cases: number; estimated_cost: number | null; explanation: string; blockers: string[];
+ sales_history: {date: string; units: number; revenue: number}[];
+};
+export type Alert = { severity: string; title: string; description: string; product_id: string; product_name: string; financial_impact: number | null; recommended_action: string };
+export type Dashboard = { inventory_value: number; slow_value: number; dead_value: number; stockout_risks: number; recommended_reorders: number; order_cost: number; missing_cost_count: number; categories: {name: string; value: number}[]; statuses: Record<string, number>; attention: Alert[]; top_profit: Metric[]; cash_tied_up: Metric[]; actions: Metric[]; product_count: number; latest_snapshot: string | null };
+export type ImportJob = { id: string; filename: string; import_type: string; status: string; row_count: number; rows_imported: number; rows_rejected: number; rows_duplicate: number; error_summary: {row: number; message: string}[]; created_at: string };
+export type OrderLine = { product_id: string; sku: string; product_name: string; cases: number; units: number; units_per_case: number; unit_cost: number; line_total: number; explanation: string };
+export type Order = { id: string; store_id: string; vendor_id: string; vendor_name: string; generated_at: string; status: string; version: number; estimated_total_cost: number; minimum_order_amount: number | null; below_minimum: boolean; lines: OrderLine[] };
