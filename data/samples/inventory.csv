@@ -1,0 +1,97 @@
+sku,product_name,quantity_on_hand,unit_cost,retail_price,snapshot_at,category,brand,size,units_per_case,vendor,upc
+BTL-0001,Cedar Ridge Reserve Whiskey,8,18.00,29.00,2026-09-20,Whiskey,Cedar Ridge,750 ml,12,Pacific Coast Distributing,000001000000
+BTL-0002,Mesa Sol Reserve Tequila,4,15.78,23.35,2026-09-20,Tequila,Mesa Sol,750 ml,6,Heritage Wine & Spirits,000001000001
+BTL-0003,North Current Reserve Vodka,5,22.19,32.84,2026-09-20,Vodka,North Current,750 ml,12,Northstar Beverage,000001000002
+BTL-0004,Juniper & Field Reserve Gin,6,29.10,43.07,2026-09-20,Gin,Juniper & Field,750 ml,12,Valley Craft Collective,000001000003
+BTL-0005,Harbor Lantern Reserve Rum,7,36.85,54.54,2026-09-20,Rum,Harbor Lantern,750 ml,12,Pacific Coast Distributing,000001000004
+BTL-0006,Valley Loom Reserve Wine,3,11.06,16.37,2026-09-20,Wine,Valley Loom,750 ml,6,Heritage Wine & Spirits,000001000005
+BTL-0007,Trailhead Reserve Beer,4,18.50,27.38,2026-09-20,Beer,Trailhead,6 × 355 ml,12,Northstar Beverage,000001000006
+BTL-0008,Orchard Vale Reserve Liqueur,5,25.08,37.12,2026-09-20,Liqueur,Orchard Vale,750 ml,12,Valley Craft Collective,000001000007
+BTL-0009,Cedar Ridge Classic Whiskey,6,32.79,48.53,2026-09-20,Whiskey,Cedar Ridge,750 ml,6,Pacific Coast Distributing,000001000008
+BTL-0010,Mesa Sol Classic Tequila,7,39.22,58.05,2026-09-20,Tequila,Mesa Sol,750 ml,6,Heritage Wine & Spirits,000001000009
+BTL-0011,North Current Classic Vodka,3,14.23,21.06,2026-09-20,Vodka,North Current,750 ml,12,Northstar Beverage,000001000010
+BTL-0012,Juniper & Field Classic Gin,4,21.36,31.61,2026-09-20,Gin,Juniper & Field,750 ml,12,Valley Craft Collective,000001000011
+BTL-0013,Harbor Lantern Classic Rum,5,28.57,42.28,2026-09-20,Rum,Harbor Lantern,750 ml,12,Pacific Coast Distributing,000001000012
+BTL-0014,Valley Loom Classic Wine,6,35.77,52.94,2026-09-20,Wine,Valley Loom,750 ml,6,Heritage Wine & Spirits,000001000013
+BTL-0015,Trailhead Classic Beer,7,10.79,15.97,2026-09-20,Beer,Trailhead,6 × 355 ml,12,Northstar Beverage,000001000014
+BTL-0016,Orchard Vale Classic Liqueur,3,17.31,25.62,2026-09-20,Liqueur,Orchard Vale,750 ml,12,Valley Craft Collective,000001000015
+BTL-0017,Cedar Ridge Small Batch Whiskey,51,24.38,36.08,2026-09-20,Whiskey,Cedar Ridge,750 ml,6,Pacific Coast Distributing,000001000016
+BTL-0018,Mesa Sol Small Batch Tequila,51,31.27,46.28,2026-09-20,Tequila,Mesa Sol,750 ml,6,Heritage Wine & Spirits,000001000017
+BTL-0019,North Current Small Batch Vodka,51,38.55,57.05,2026-09-20,Vodka,North Current,750 ml,12,Northstar Beverage,000001000018
+BTL-0020,Juniper & Field Small Batch Gin,51,13.37,19.79,2026-09-20,Gin,Juniper & Field,750 ml,12,Valley Craft Collective,000001000019
+BTL-0021,Harbor Lantern Small Batch Rum,70,14.00,23.00,2026-09-20,Rum,Harbor Lantern,750 ml,12,Pacific Coast Distributing,000001000020
+BTL-0022,Valley Loom Small Batch Wine,51,27.68,40.97,2026-09-20,Wine,Valley Loom,750 ml,6,Heritage Wine & Spirits,000001000021
+BTL-0023,Trailhead Small Batch Beer,51,34.01,50.33,2026-09-20,Beer,Trailhead,6 × 355 ml,12,Northstar Beverage,000001000022
+BTL-0024,Orchard Vale Small Batch Liqueur,51,9.04,13.38,2026-09-20,Liqueur,Orchard Vale,750 ml,12,Valley Craft Collective,000001000023
+BTL-0025,Cedar Ridge Estate Whiskey,51,16.57,24.52,2026-09-20,Whiskey,Cedar Ridge,750 ml,6,Pacific Coast Distributing,000001000024
+BTL-0026,Mesa Sol Estate Tequila,51,23.07,34.14,2026-09-20,Tequila,Mesa Sol,750 ml,6,Heritage Wine & Spirits,000001000025
+BTL-0027,North Current Estate Vodka,51,30.93,45.78,2026-09-20,Vodka,North Current,750 ml,12,Northstar Beverage,000001000026
+BTL-0028,Juniper & Field Estate Gin,51,37.97,56.20,2026-09-20,Gin,Juniper & Field,750 ml,12,Valley Craft Collective,000001000027
+BTL-0029,Harbor Lantern Estate Rum,51,12.28,18.17,2026-09-20,Rum,Harbor Lantern,750 ml,12,Pacific Coast Distributing,000001000028
+BTL-0030,Valley Loom Estate Wine,51,19.76,29.24,2026-09-20,Wine,Valley Loom,750 ml,6,Heritage Wine & Spirits,000001000029
+BTL-0031,Trailhead Estate Beer,51,26.41,39.09,2026-09-20,Beer,Trailhead,6 × 355 ml,12,Northstar Beverage,000001000030
+BTL-0032,Orchard Vale Estate Liqueur,51,33.23,49.18,2026-09-20,Liqueur,Orchard Vale,750 ml,12,Valley Craft Collective,000001000031
+BTL-0033,Cedar Ridge Golden Whiskey,51,8.01,11.85,2026-09-20,Whiskey,Cedar Ridge,750 ml,6,Pacific Coast Distributing,000001000032
+BTL-0034,Mesa Sol Golden Tequila,51,15.52,22.97,2026-09-20,Tequila,Mesa Sol,750 ml,6,Heritage Wine & Spirits,000001000033
+BTL-0035,North Current Golden Vodka,51,22.00,32.56,2026-09-20,Vodka,North Current,750 ml,12,Northstar Beverage,000001000034
+BTL-0036,Juniper & Field Golden Gin,51,29.89,44.24,2026-09-20,Gin,Juniper & Field,750 ml,12,Valley Craft Collective,000001000035
+BTL-0037,Harbor Lantern Golden Rum,51,36.40,53.87,2026-09-20,Rum,Harbor Lantern,750 ml,12,Pacific Coast Distributing,000001000036
+BTL-0038,Valley Loom Golden Wine,51,11.32,16.75,2026-09-20,Wine,Valley Loom,750 ml,6,Heritage Wine & Spirits,000001000037
+BTL-0039,Trailhead Golden Beer,51,18.58,27.50,2026-09-20,Beer,Trailhead,6 × 355 ml,12,Northstar Beverage,000001000038
+BTL-0040,Orchard Vale Golden Liqueur,51,25.10,37.15,2026-09-20,Liqueur,Orchard Vale,750 ml,12,Valley Craft Collective,000001000039
+BTL-0041,Cedar Ridge Highland Whiskey,51,32.52,48.13,2026-09-20,Whiskey,Cedar Ridge,750 ml,6,Pacific Coast Distributing,000001000040
+BTL-0042,Mesa Sol Highland Tequila,51,39.45,58.39,2026-09-20,Tequila,Mesa Sol,750 ml,6,Heritage Wine & Spirits,000001000041
+BTL-0043,North Current Highland Vodka,51,14.65,21.68,2026-09-20,Vodka,North Current,750 ml,12,Northstar Beverage,000001000042
+BTL-0044,Juniper & Field Highland Gin,51,21.64,32.03,2026-09-20,Gin,Juniper & Field,750 ml,12,Valley Craft Collective,000001000043
+BTL-0045,Harbor Lantern Highland Rum,51,28.44,42.09,2026-09-20,Rum,Harbor Lantern,750 ml,12,Pacific Coast Distributing,000001000044
+BTL-0046,Valley Loom Highland Wine,51,35.17,52.05,2026-09-20,Wine,Valley Loom,750 ml,6,Heritage Wine & Spirits,000001000045
+BTL-0047,Trailhead Highland Beer,51,10.59,15.67,2026-09-20,Beer,Trailhead,6 × 355 ml,12,Northstar Beverage,000001000046
+BTL-0048,Orchard Vale Highland Liqueur,51,17.61,26.06,2026-09-20,Liqueur,Orchard Vale,750 ml,12,Valley Craft Collective,000001000047
+BTL-0049,Cedar Ridge Coastal Whiskey,51,24.34,36.02,2026-09-20,Whiskey,Cedar Ridge,750 ml,6,Pacific Coast Distributing,000001000048
+BTL-0050,Mesa Sol Coastal Tequila,51,31.08,46.00,2026-09-20,Tequila,Mesa Sol,750 ml,6,Heritage Wine & Spirits,000001000049
+BTL-0051,North Current Coastal Vodka,51,38.13,56.43,2026-09-20,Vodka,North Current,750 ml,12,Northstar Beverage,000001000050
+BTL-0052,Juniper & Field Coastal Gin,51,13.56,20.07,2026-09-20,Gin,Juniper & Field,750 ml,12,Valley Craft Collective,000001000051
+BTL-0053,Harbor Lantern Coastal Rum,51,20.85,30.86,2026-09-20,Rum,Harbor Lantern,750 ml,12,Pacific Coast Distributing,000001000052
+BTL-0054,Valley Loom Coastal Wine,51,27.35,40.48,2026-09-20,Wine,Valley Loom,750 ml,6,Heritage Wine & Spirits,000001000053
+BTL-0055,Trailhead Coastal Beer,51,34.55,51.13,2026-09-20,Beer,Trailhead,6 × 355 ml,12,Northstar Beverage,000001000054
+BTL-0056,Orchard Vale Coastal Liqueur,51,9.97,14.76,2026-09-20,Liqueur,Orchard Vale,750 ml,12,Valley Craft Collective,000001000055
+BTL-0057,Cedar Ridge Founders Whiskey,166,16.32,24.15,2026-09-20,Whiskey,Cedar Ridge,750 ml,6,Pacific Coast Distributing,000001000056
+BTL-0058,Mesa Sol Founders Tequila,167,23.25,34.41,2026-09-20,Tequila,Mesa Sol,750 ml,6,Heritage Wine & Spirits,000001000057
+BTL-0059,North Current Founders Vodka,168,30.19,44.68,2026-09-20,Vodka,North Current,750 ml,12,Northstar Beverage,000001000058
+BTL-0060,Juniper & Field Founders Gin,169,37.14,54.97,2026-09-20,Gin,Juniper & Field,750 ml,12,Valley Craft Collective,000001000059
+BTL-0061,Harbor Lantern Founders Rum,170,12.38,18.32,2026-09-20,Rum,Harbor Lantern,750 ml,12,Pacific Coast Distributing,000001000060
+BTL-0062,Valley Loom Founders Wine,171,19.82,29.33,2026-09-20,Wine,Valley Loom,750 ml,6,Heritage Wine & Spirits,000001000061
+BTL-0063,Trailhead Founders Beer,172,26.74,39.58,2026-09-20,Beer,Trailhead,6 × 355 ml,12,Northstar Beverage,000001000062
+BTL-0064,Orchard Vale Founders Liqueur,173,33.05,48.91,2026-09-20,Liqueur,Orchard Vale,750 ml,12,Valley Craft Collective,000001000063
+BTL-0065,Cedar Ridge Silver Whiskey,174,8.99,13.31,2026-09-20,Whiskey,Cedar Ridge,750 ml,6,Pacific Coast Distributing,000001000064
+BTL-0066,Mesa Sol Silver Tequila,175,15.37,22.75,2026-09-20,Tequila,Mesa Sol,750 ml,6,Heritage Wine & Spirits,000001000065
+BTL-0067,North Current Silver Vodka,176,22.62,33.48,2026-09-20,Vodka,North Current,750 ml,12,Northstar Beverage,000001000066
+BTL-0068,Juniper & Field Silver Gin,177,29.77,44.06,2026-09-20,Gin,Juniper & Field,750 ml,12,Valley Craft Collective,000001000067
+BTL-0069,Harbor Lantern Silver Rum,178,36.20,53.58,2026-09-20,Rum,Harbor Lantern,750 ml,12,Pacific Coast Distributing,000001000068
+BTL-0070,Valley Loom Silver Wine,179,11.18,16.55,2026-09-20,Wine,Valley Loom,750 ml,6,Heritage Wine & Spirits,000001000069
+BTL-0071,Trailhead Silver Beer,180,18.32,27.11,2026-09-20,Beer,Trailhead,6 × 355 ml,12,Northstar Beverage,000001000070
+BTL-0072,Orchard Vale Silver Liqueur,181,25.81,38.20,2026-09-20,Liqueur,Orchard Vale,750 ml,12,Valley Craft Collective,000001000071
+BTL-0073,Cedar Ridge Oak Whiskey,182,32.83,48.59,2026-09-20,Whiskey,Cedar Ridge,750 ml,6,Pacific Coast Distributing,000001000072
+BTL-0074,Mesa Sol Oak Tequila,183,39.96,59.14,2026-09-20,Tequila,Mesa Sol,750 ml,6,Heritage Wine & Spirits,000001000073
+BTL-0075,North Current Oak Vodka,184,14.69,21.74,2026-09-20,Vodka,North Current,750 ml,12,Northstar Beverage,000001000074
+BTL-0076,Juniper & Field Oak Gin,185,21.67,32.07,2026-09-20,Gin,Juniper & Field,750 ml,12,Valley Craft Collective,000001000075
+BTL-0077,Harbor Lantern Oak Rum,186,28.97,42.88,2026-09-20,Rum,Harbor Lantern,750 ml,12,Pacific Coast Distributing,000001000076
+BTL-0078,Valley Loom Oak Wine,187,35.91,53.15,2026-09-20,Wine,Valley Loom,750 ml,6,Heritage Wine & Spirits,000001000077
+BTL-0079,Trailhead Oak Beer,188,10.34,15.30,2026-09-20,Beer,Trailhead,6 × 355 ml,12,Northstar Beverage,000001000078
+BTL-0080,Orchard Vale Oak Liqueur,189,,25.60,2026-09-20,Liqueur,Orchard Vale,750 ml,12,Valley Craft Collective,000001000079
+BTL-0081,Cedar Ridge Meadow Whiskey,150,24.80,36.70,2026-09-20,Whiskey,Cedar Ridge,750 ml,6,Pacific Coast Distributing,000001000080
+BTL-0082,Mesa Sol Meadow Tequila,151,31.81,47.08,2026-09-20,Tequila,Mesa Sol,750 ml,6,Heritage Wine & Spirits,000001000081
+BTL-0083,North Current Meadow Vodka,152,38.08,56.36,2026-09-20,Vodka,North Current,750 ml,12,Northstar Beverage,000001000082
+BTL-0084,Juniper & Field Meadow Gin,153,13.90,20.57,2026-09-20,Gin,Juniper & Field,750 ml,12,Valley Craft Collective,000001000083
+BTL-0085,Harbor Lantern Meadow Rum,154,20.73,30.68,2026-09-20,Rum,Harbor Lantern,750 ml,12,Pacific Coast Distributing,000001000084
+BTL-0086,Valley Loom Meadow Wine,155,27.07,40.06,2026-09-20,Wine,Valley Loom,750 ml,6,Heritage Wine & Spirits,000001000085
+BTL-0087,Trailhead Meadow Beer,156,34.26,50.70,2026-09-20,Beer,Trailhead,6 × 355 ml,12,Northstar Beverage,000001000086
+BTL-0088,Orchard Vale Meadow Liqueur,157,9.05,13.39,2026-09-20,Liqueur,Orchard Vale,750 ml,12,Valley Craft Collective,000001000087
+BTL-0089,Cedar Ridge Evening Whiskey,158,16.35,24.20,2026-09-20,Whiskey,Cedar Ridge,750 ml,6,Pacific Coast Distributing,000001000088
+BTL-0090,Mesa Sol Evening Tequila,159,23.56,34.87,2026-09-20,Tequila,Mesa Sol,750 ml,6,Heritage Wine & Spirits,000001000089
+BTL-0091,North Current Evening Vodka,160,30.61,45.30,2026-09-20,Vodka,North Current,750 ml,12,Northstar Beverage,000001000090
+BTL-0092,Juniper & Field Evening Gin,161,37.22,55.09,2026-09-20,Gin,Juniper & Field,750 ml,12,Valley Craft Collective,000001000091
+BTL-0093,Harbor Lantern Evening Rum,162,12.18,18.03,2026-09-20,Rum,Harbor Lantern,750 ml,12,Pacific Coast Distributing,000001000092
+BTL-0094,Valley Loom Evening Wine,163,19.47,28.82,2026-09-20,Wine,Valley Loom,750 ml,6,Heritage Wine & Spirits,000001000093
+BTL-0095,Trailhead Evening Beer,164,26.30,38.92,2026-09-20,Beer,Trailhead,6 × 355 ml,12,Northstar Beverage,000001000094
+BTL-0096,Orchard Vale Evening Liqueur,165,33.97,50.28,2026-09-20,Liqueur,Orchard Vale,750 ml,12,Valley Craft Collective,000001000095

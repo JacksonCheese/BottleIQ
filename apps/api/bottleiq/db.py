@@ -12,9 +12,11 @@ class Base(DeclarativeBase):
 
 engine = create_engine(settings().database_url, pool_pre_ping=True)
 if engine.dialect.name == "sqlite":
+
     @event.listens_for(engine, "connect")
     def sqlite_foreign_keys(connection: object, _: object) -> None:
         connection.execute("PRAGMA foreign_keys=ON")  # type: ignore[attr-defined]
+
 
 SessionLocal = sessionmaker(engine, expire_on_commit=False)
 

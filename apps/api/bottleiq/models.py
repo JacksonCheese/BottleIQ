@@ -80,7 +80,11 @@ class Vendor(Identity, Tenant, Base):
     vendor_code: Mapped[str | None] = mapped_column(String(60))
     default_lead_time_days: Mapped[int] = mapped_column(default=4)
     minimum_order_amount: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
-    __table_args__ = (UniqueConstraint("id", "organization_id"), UniqueConstraint("organization_id", "name"), CheckConstraint("default_lead_time_days >= 0"))
+    __table_args__ = (
+        UniqueConstraint("id", "organization_id"),
+        UniqueConstraint("organization_id", "name"),
+        CheckConstraint("default_lead_time_days >= 0"),
+    )
 
 
 class Product(Identity, Tenant, Base):
@@ -95,11 +99,27 @@ class Product(Identity, Tenant, Base):
     units_per_case: Mapped[int] = mapped_column(default=12)
     default_vendor_id: Mapped[str | None] = mapped_column(String(36))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    __table_args__ = (UniqueConstraint("id", "organization_id"), UniqueConstraint("organization_id", "sku"), ForeignKeyConstraint(["default_vendor_id", "organization_id"], ["vendors.id", "vendors.organization_id"]), CheckConstraint("units_per_case > 0"))
+    __table_args__ = (
+        UniqueConstraint("id", "organization_id"),
+        UniqueConstraint("organization_id", "sku"),
+        ForeignKeyConstraint(
+            ["default_vendor_id", "organization_id"], ["vendors.id", "vendors.organization_id"]
+        ),
+        CheckConstraint("units_per_case > 0"),
+    )
 
 
 def fact_constraints(table: str) -> tuple:
-    return (ForeignKeyConstraint(["store_id", "organization_id"], ["stores.id", "stores.organization_id"]), ForeignKeyConstraint(["product_id", "organization_id"], ["products.id", "products.organization_id"]), UniqueConstraint("store_id", "source_key"), Index(f"ix_{table}_store_product", "store_id", "product_id"))
+    return (
+        ForeignKeyConstraint(
+            ["store_id", "organization_id"], ["stores.id", "stores.organization_id"]
+        ),
+        ForeignKeyConstraint(
+            ["product_id", "organization_id"], ["products.id", "products.organization_id"]
+        ),
+        UniqueConstraint("store_id", "source_key"),
+        Index(f"ix_{table}_store_product", "store_id", "product_id"),
+    )
 
 
 class Fact(Identity, Tenant):
@@ -116,7 +136,10 @@ class Sale(Fact, Base):
     gross_revenue: Mapped[Decimal] = mapped_column(Numeric(14, 2))
     unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     transaction_id: Mapped[str | None] = mapped_column(String(100))
-    __table_args__ = (*fact_constraints("sales"), CheckConstraint("quantity >= 0 AND gross_revenue >= 0"))
+    __table_args__ = (
+        *fact_constraints("sales"),
+        CheckConstraint("quantity >= 0 AND gross_revenue >= 0"),
+    )
 
 
 class InventorySnapshot(Fact, Base):
@@ -125,7 +148,11 @@ class InventorySnapshot(Fact, Base):
     quantity_on_hand: Mapped[int] = mapped_column(Integer)
     unit_cost: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     retail_price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
-    __table_args__ = (*fact_constraints("inventory"), CheckConstraint("quantity_on_hand >= 0 AND retail_price >= 0"), CheckConstraint("unit_cost IS NULL OR unit_cost >= 0"))
+    __table_args__ = (
+        *fact_constraints("inventory"),
+        CheckConstraint("quantity_on_hand >= 0 AND retail_price >= 0"),
+        CheckConstraint("unit_cost IS NULL OR unit_cost >= 0"),
+    )
 
 
 class Purchase(Fact, Base):
@@ -137,7 +164,13 @@ class Purchase(Fact, Base):
     unit_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     total_cost: Mapped[Decimal] = mapped_column(Numeric(14, 2))
     invoice_number: Mapped[str | None] = mapped_column(String(100))
-    __table_args__ = (*fact_constraints("purchases"), ForeignKeyConstraint(["vendor_id", "organization_id"], ["vendors.id", "vendors.organization_id"]), CheckConstraint("quantity_units > 0 AND unit_cost >= 0"))
+    __table_args__ = (
+        *fact_constraints("purchases"),
+        ForeignKeyConstraint(
+            ["vendor_id", "organization_id"], ["vendors.id", "vendors.organization_id"]
+        ),
+        CheckConstraint("quantity_units > 0 AND unit_cost >= 0"),
+    )
 
 
 class ImportJob(Identity, Tenant, Base):
@@ -152,7 +185,12 @@ class ImportJob(Identity, Tenant, Base):
     rows_rejected: Mapped[int] = mapped_column(default=0)
     rows_duplicate: Mapped[int] = mapped_column(default=0)
     error_summary: Mapped[list[dict]] = mapped_column(JSON, default=list)
-    __table_args__ = (ForeignKeyConstraint(["store_id", "organization_id"], ["stores.id", "stores.organization_id"]), UniqueConstraint("store_id", "import_type", "file_hash"))
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["store_id", "organization_id"], ["stores.id", "stores.organization_id"]
+        ),
+        UniqueConstraint("store_id", "import_type", "file_hash"),
+    )
 
 
 class ReorderRecommendation(Identity, Tenant, Base):
@@ -172,7 +210,17 @@ class ReorderRecommendation(Identity, Tenant, Base):
     estimated_cost: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     status: Mapped[str] = mapped_column(String(40))
     explanation: Mapped[str] = mapped_column(Text)
-    __table_args__ = (ForeignKeyConstraint(["store_id", "organization_id"], ["stores.id", "stores.organization_id"]), ForeignKeyConstraint(["product_id", "organization_id"], ["products.id", "products.organization_id"]), ForeignKeyConstraint(["vendor_id", "organization_id"], ["vendors.id", "vendors.organization_id"]))
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["store_id", "organization_id"], ["stores.id", "stores.organization_id"]
+        ),
+        ForeignKeyConstraint(
+            ["product_id", "organization_id"], ["products.id", "products.organization_id"]
+        ),
+        ForeignKeyConstraint(
+            ["vendor_id", "organization_id"], ["vendors.id", "vendors.organization_id"]
+        ),
+    )
 
 
 class SmartOrder(Identity, Tenant, Base):
@@ -183,7 +231,16 @@ class SmartOrder(Identity, Tenant, Base):
     status: Mapped[str] = mapped_column(String(20), default="draft")
     estimated_total_cost: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0)
     version: Mapped[int] = mapped_column(default=1)
-    __table_args__ = (UniqueConstraint("id", "organization_id"), ForeignKeyConstraint(["store_id", "organization_id"], ["stores.id", "stores.organization_id"]), ForeignKeyConstraint(["vendor_id", "organization_id"], ["vendors.id", "vendors.organization_id"]), CheckConstraint("estimated_total_cost >= 0"))
+    __table_args__ = (
+        UniqueConstraint("id", "organization_id"),
+        ForeignKeyConstraint(
+            ["store_id", "organization_id"], ["stores.id", "stores.organization_id"]
+        ),
+        ForeignKeyConstraint(
+            ["vendor_id", "organization_id"], ["vendors.id", "vendors.organization_id"]
+        ),
+        CheckConstraint("estimated_total_cost >= 0"),
+    )
 
 
 class SmartOrderLine(Identity, Tenant, Base):
@@ -196,4 +253,14 @@ class SmartOrderLine(Identity, Tenant, Base):
     unit_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     line_total: Mapped[Decimal] = mapped_column(Numeric(14, 2))
     explanation: Mapped[str] = mapped_column(Text)
-    __table_args__ = (UniqueConstraint("smart_order_id", "product_id"), ForeignKeyConstraint(["smart_order_id", "organization_id"], ["smart_orders.id", "smart_orders.organization_id"]), ForeignKeyConstraint(["product_id", "organization_id"], ["products.id", "products.organization_id"]), CheckConstraint("recommended_units >= 0 AND recommended_cases >= 0"))
+    __table_args__ = (
+        UniqueConstraint("smart_order_id", "product_id"),
+        ForeignKeyConstraint(
+            ["smart_order_id", "organization_id"],
+            ["smart_orders.id", "smart_orders.organization_id"],
+        ),
+        ForeignKeyConstraint(
+            ["product_id", "organization_id"], ["products.id", "products.organization_id"]
+        ),
+        CheckConstraint("recommended_units >= 0 AND recommended_cases >= 0"),
+    )
