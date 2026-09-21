@@ -1,0 +1,90 @@
+name: BottleIQ checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: bottleiq
+          POSTGRES_PASSWORD: bottleiq
+          POSTGRES_DB: bottleiq_test
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U bottleiq" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://bottleiq:bottleiq@localhost:5432/bottleiq_test
+      TEST_DATABASE_URL: postgresql+psycopg://bottleiq:bottleiq@localhost:5432/bottleiq_test
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check bottleiq tests alembic
+      - run: uv run ruff format --check bottleiq tests alembic
+      - run: uv run mypy bottleiq
+      - run: uv run alembic upgrade head && uv run alembic check && uv run alembic downgrade base && uv run alembic upgrade head
+      - run: uv run pytest -q
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run lint && npm run format:check
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+  browser-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: bottleiq
+          POSTGRES_PASSWORD: bottleiq
+          POSTGRES_DB: bottleiq
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U bottleiq" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://bottleiq:bottleiq@localhost:5432/bottleiq
+      DEMO_ENABLED: "true"
+      WEB_ORIGIN: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: make setup seed
+      - run: cd apps/web && npx playwright install --with-deps chromium && npm run build
+      - run: |
+          cd apps/api && uv run uvicorn bottleiq.main:app --host 127.0.0.1 --port 8000 > /tmp/api.log 2>&1 &
+          cd apps/web && npm start > /tmp/web.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://localhost:3000 >/dev/null && curl -fsS http://localhost:8000/health >/dev/null; then break; fi
+            sleep 2
+          done
+          make smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-results
+          path: |
+            apps/web/test-results
+            docs/screenshots
