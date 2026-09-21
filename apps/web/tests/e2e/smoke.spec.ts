@@ -3,6 +3,7 @@ test.use({ reducedMotion: "reduce" });
 test("demo owner can inspect inventory and edit/export a Smart Order", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Stop guessing what to order." }),
@@ -81,6 +82,19 @@ test("responsive dashboard and navigation stay usable", async ({ page }) => {
     path: "../../docs/screenshots/mobile-dashboard.png",
     fullPage: true,
   });
+  await expect(page.getByRole("link", { name: "Today" })).toBeHidden();
+  for (const width of [768, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(
+      page.getByRole("link", { name: /Build this week’s order/i }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await page.setViewportSize({ width: 375, height: 812 });
   await page.getByRole("button", { name: "Toggle navigation" }).click();
   await page.getByRole("link", { name: "Update data", exact: true }).click();
   await expect(
