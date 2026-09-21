@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from bottleiq.auth import Actor, current_actor, editor, get_store
 from bottleiq.db import get_db
 from bottleiq.models import SmartOrder
-from bottleiq.schemas import OrderEdit, OrderInput
+from bottleiq.schemas import OrderEdit, OrderInput, OrderView
 from bottleiq.services.orders import create_order, edit_order, export_order, order_detail
 
 router = APIRouter(prefix="/smart-orders", tags=["Smart Orders"])
@@ -22,12 +22,12 @@ def find_order(db: Session, actor: Actor, order_id: str, lock: bool = False) -> 
     return order
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, response_model=OrderView)
 def create(data: OrderInput, actor: Actor = Depends(editor), db: Session = Depends(get_db)) -> dict:
     return order_detail(db, create_order(db, get_store(db, actor, data.store_id), data))
 
 
-@router.get("")
+@router.get("", response_model=list[OrderView])
 def orders(
     store_id: str, actor: Actor = Depends(current_actor), db: Session = Depends(get_db)
 ) -> list[dict]:
@@ -45,14 +45,14 @@ def orders(
     ]
 
 
-@router.get("/{order_id}")
+@router.get("/{order_id}", response_model=OrderView)
 def detail(
     order_id: str, actor: Actor = Depends(current_actor), db: Session = Depends(get_db)
 ) -> dict:
     return order_detail(db, find_order(db, actor, order_id))
 
 
-@router.patch("/{order_id}")
+@router.patch("/{order_id}", response_model=OrderView)
 def update(
     order_id: str, data: OrderEdit, actor: Actor = Depends(editor), db: Session = Depends(get_db)
 ) -> dict:

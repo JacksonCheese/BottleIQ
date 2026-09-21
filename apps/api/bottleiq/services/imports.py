@@ -144,7 +144,9 @@ def cache_for(db: Session, store: Store, kind: str) -> ImportCache:
                 select(model.source_key, model.content_hash).where(
                     model.store_id == store.id, model.organization_id == store.organization_id
                 )
-            ).all()
+            )
+            .tuples()
+            .all()
         ),
     )
 
@@ -241,6 +243,22 @@ def import_row(
             raise ValueError("units_per_case: must be between 1 and 1000")
         db.add(product)
         db.flush()
+    # Inventory exports can enrich SKUs that were first discovered in sales.
+    if kind == "inventory":
+        for field, limit in (
+            ("product_name", 200),
+            ("category", 80),
+            ("brand", 120),
+            ("size", 40),
+            ("upc", 32),
+        ):
+            if row.get(field):
+                setattr(product, field, required(row, field, limit))
+        if row.get("units_per_case"):
+            pack = int(number(row["units_per_case"], "units_per_case", integer=True) or 0)
+            if not 1 <= pack <= 1000:
+                raise ValueError("units_per_case: must be between 1 and 1000")
+            product.units_per_case = pack
     vendor = None
     if row.get("vendor"):
         name = required(row, "vendor", 160)

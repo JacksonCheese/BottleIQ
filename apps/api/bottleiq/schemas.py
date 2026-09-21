@@ -1,5 +1,4 @@
-from datetime import date
-from typing import Literal
+from datetime import date, datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -30,7 +29,15 @@ class StoreInput(BaseModel):
 
 
 class AnalysisOptions(BaseModel):
-    window: Literal[30, 60, 90] = 60
+    window: int = 60
+
+    @field_validator("window")
+    @classmethod
+    def supported_window(cls, value: int) -> int:
+        if value not in (30, 60, 90):
+            raise ValueError("Demand window must be 30, 60, or 90 days")
+        return value
+
     target_days: int = Field(default=21, ge=7, le=60)
     service_level: float = Field(default=0.95, ge=0.8, le=0.999)
     dead_days: int = Field(default=90, ge=30, le=365)
@@ -123,3 +130,83 @@ class Alert(BaseModel):
     product_name: str
     financial_impact: float | None
     recommended_action: str
+
+
+class StoreView(BaseModel):
+    id: str
+    name: str
+    timezone: str
+
+
+class VendorView(BaseModel):
+    id: str
+    name: str
+    default_lead_time_days: int
+    minimum_order_amount: float | None
+
+
+class RejectedRow(BaseModel):
+    row: int
+    message: str
+
+
+class ImportJobView(BaseModel):
+    id: str
+    filename: str
+    import_type: str
+    status: str
+    row_count: int
+    rows_imported: int
+    rows_rejected: int
+    rows_duplicate: int
+    error_summary: list[RejectedRow]
+    created_at: datetime
+
+
+class OrderLineView(BaseModel):
+    product_id: str
+    sku: str
+    product_name: str
+    cases: int
+    units: int
+    units_per_case: int
+    unit_cost: float
+    line_total: float
+    explanation: str
+
+
+class OrderView(BaseModel):
+    id: str
+    store_id: str
+    vendor_id: str
+    vendor_name: str
+    generated_at: datetime
+    status: str
+    version: int
+    estimated_total_cost: float
+    minimum_order_amount: float | None
+    below_minimum: bool
+    lines: list[OrderLineView]
+
+
+class CategoryValue(BaseModel):
+    name: str
+    value: float
+
+
+class DashboardView(BaseModel):
+    inventory_value: float
+    slow_value: float
+    dead_value: float
+    stockout_risks: int
+    recommended_reorders: int
+    order_cost: float
+    missing_cost_count: int
+    categories: list[CategoryValue]
+    statuses: dict[str, int]
+    attention: list[Alert]
+    top_profit: list[Metrics]
+    cash_tied_up: list[Metrics]
+    actions: list[Metrics]
+    product_count: int
+    latest_snapshot: date | None

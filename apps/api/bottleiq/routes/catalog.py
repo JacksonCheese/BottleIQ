@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -9,18 +9,39 @@ from bottleiq.models import Product, Store, Vendor
 from bottleiq.schemas import (
     Alert,
     AnalysisOptions,
+    DashboardView,
     GenerateInput,
     Metrics,
     ProductEdit,
     StoreInput,
+    StoreView,
     VendorInput,
+    VendorView,
 )
 from bottleiq.services.analytics import alerts_for, analyze, persist_recommendations
 
 router = APIRouter(tags=["Inventory intelligence"])
 
 
-@router.get("/stores")
+def query_options(
+    window: int = Query(60),
+    target_days: int = Query(21, ge=7, le=60),
+    service_level: float = Query(0.95, ge=0.8, le=0.999),
+    dead_days: int = Query(90, ge=30, le=365),
+    slow_days: int = Query(90, ge=30, le=365),
+) -> AnalysisOptions:
+    if window not in (30, 60, 90):
+        raise HTTPException(422, "Demand window must be 30, 60, or 90 days")
+    return AnalysisOptions(
+        window=window,
+        target_days=target_days,
+        service_level=service_level,
+        dead_days=dead_days,
+        slow_days=slow_days,
+    )
+
+
+@router.get("/stores", response_model=list[StoreView])
 def stores(actor: Actor = Depends(current_actor), db: Session = Depends(get_db)) -> list[dict]:
     return [
         {"id": s.id, "name": s.name, "timezone": s.timezone}
@@ -32,7 +53,7 @@ def stores(actor: Actor = Depends(current_actor), db: Session = Depends(get_db))
     ]
 
 
-@router.post("/stores", status_code=201)
+@router.post("/stores", status_code=201, response_model=StoreView)
 def create_store(
     data: StoreInput, actor: Actor = Depends(editor), db: Session = Depends(get_db)
 ) -> dict:
@@ -42,7 +63,7 @@ def create_store(
     return {"id": store.id, "name": store.name, "timezone": store.timezone}
 
 
-@router.get("/vendors")
+@router.get("/vendors", response_model=list[VendorView])
 def vendors(actor: Actor = Depends(current_actor), db: Session = Depends(get_db)) -> list[dict]:
     return [
         {
@@ -101,7 +122,7 @@ def update_vendor(
 @router.get("/recommendations", response_model=list[Metrics])
 def inventory(
     store_id: str,
-    options: AnalysisOptions = Depends(),
+    options: AnalysisOptions = Depends(query_options),
     actor: Actor = Depends(current_actor),
     db: Session = Depends(get_db),
 ) -> list[Metrics]:
@@ -166,7 +187,7 @@ def generate(
     return metrics
 
 
-@router.get("/dashboard")
+@router.get("/dashboard", response_model=DashboardView)
 def dashboard(
     store_id: str, actor: Actor = Depends(current_actor), db: Session = Depends(get_db)
 ) -> dict:

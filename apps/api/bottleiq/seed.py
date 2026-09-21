@@ -9,12 +9,20 @@ import secrets
 from datetime import date, timedelta
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from bottleiq.auth import passwords
 from bottleiq.db import SessionLocal
-from bottleiq.models import Organization, OrganizationMember, Product, Store, User, Vendor
+from bottleiq.models import (
+    InventorySnapshot,
+    Organization,
+    OrganizationMember,
+    Product,
+    Store,
+    User,
+    Vendor,
+)
 from bottleiq.services.imports import import_csv
 
 VENDORS = [
@@ -160,6 +168,12 @@ def seed_demo(db: Session, as_of: date | None = None, product_count: int = 96) -
         )
         if not store:
             raise ValueError("Demo account is incomplete")
+        # Resume partial seeds at their original date; repeated seeds never rewrite history.
+        as_of = as_of or db.scalar(
+            select(func.max(InventorySnapshot.snapshot_at)).where(
+                InventorySnapshot.store_id == store.id
+            )
+        )
     else:
         org = Organization(name="BottleIQ Demo · Cedar & Cask")
         user = User(

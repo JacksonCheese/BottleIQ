@@ -6,11 +6,13 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from bottleiq.auth import Actor, current_actor, editor, get_store
 from bottleiq.config import settings
 from bottleiq.db import get_db
 from bottleiq.models import ImportJob
+from bottleiq.schemas import ImportJobView
 from bottleiq.services.imports import FIELDS, import_csv
 
 router = APIRouter(prefix="/imports", tags=["Imports"])
@@ -21,7 +23,7 @@ def fields() -> dict:
     return FIELDS
 
 
-@router.get("")
+@router.get("", response_model=list[ImportJobView])
 def jobs(
     store_id: str, actor: Actor = Depends(current_actor), db: Session = Depends(get_db)
 ) -> list[dict]:
@@ -74,7 +76,7 @@ def rejected_rows(
     )
 
 
-@router.post("/{kind}")
+@router.post("/{kind}", response_model=ImportJobView)
 async def upload(
     kind: Literal["sales", "inventory", "purchases"],
     store_id: str = Form(...),
@@ -96,9 +98,10 @@ async def upload(
             isinstance(k, str) and isinstance(v, str) for k, v in column_map.items()
         ):
             raise ValueError("Column mapping must map field names to CSV headers")
-        return job_dict(
-            import_csv(db, store, kind, content, file.filename or "upload.csv", column_map)
+        job = await run_in_threadpool(
+            import_csv, db, store, kind, content, file.filename or "upload.csv", column_map
         )
+        return job_dict(job)
     except ValueError as exc:
         db.rollback()
         raise HTTPException(422, str(exc)) from exc
