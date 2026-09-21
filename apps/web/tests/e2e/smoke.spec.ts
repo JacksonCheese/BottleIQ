@@ -9,14 +9,15 @@ test("demo owner can inspect inventory and edit/export a Smart Order", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: "Try the Demo" }).click();
   await expect(
-    page.getByRole("heading", { name: "A clearer view, Alex." }),
+    page.getByRole("heading", { name: "Good morning, Alex." }),
   ).toBeVisible();
+  await expect(page.getByText("ORDER THIS WEEK")).toBeVisible();
   await expect(page.getByText("Total inventory value")).toBeVisible();
   await page.screenshot({
     path: "../../docs/screenshots/dashboard.png",
     fullPage: true,
   });
-  await page.getByRole("link", { name: "Inventory", exact: true }).click();
+  await page.getByRole("link", { name: "Products", exact: true }).click();
   await page.getByLabel("Search inventory").fill("BTL-0001");
   await expect(
     page.getByRole("link", { name: "Cedar Ridge Reserve Whiskey" }),
@@ -50,10 +51,10 @@ test("responsive navigation stays usable", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Try the Demo" }).click();
   await expect(
-    page.getByRole("heading", { name: "A clearer view, Alex." }),
+    page.getByRole("heading", { name: "Good morning, Alex." }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Toggle navigation" }).click();
-  await page.getByRole("link", { name: "Import data", exact: true }).click();
+  await page.getByRole("link", { name: "Update data", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Bring your store into focus." }),
   ).toBeVisible();
@@ -109,7 +110,7 @@ test("new owner can sign up, create a store, map CSV columns, and import data", 
   });
   await page.getByRole("button", { name: "Validate & import" }).click();
   await expect(page.getByRole("status")).toContainText("90 imported");
-  await page.getByRole("link", { name: "Inventory", exact: true }).click();
+  await page.getByRole("link", { name: "Products", exact: true }).click();
   await expect(
     page.getByRole("link", { name: "Synthetic Test Whiskey" }),
   ).toBeVisible();

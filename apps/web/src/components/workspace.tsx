@@ -30,13 +30,15 @@ export function useWorkspace() {
   if (!value) throw new Error("Workspace required");
   return value;
 }
-const nav = [
-  { href: "/dashboard", name: "Overview", icon: LayoutDashboard },
-  { href: "/inventory", name: "Inventory", icon: Package },
-  { href: "/smart-orders", name: "Smart Orders", icon: ShoppingCart },
+const primaryNav = [
+  { href: "/dashboard", name: "Today", icon: LayoutDashboard },
+  { href: "/smart-orders", name: "Order", icon: ShoppingCart },
+  { href: "/inventory", name: "Products", icon: Package },
   { href: "/alerts", name: "Alerts", icon: Bell },
-  { href: "/imports", name: "Import data", icon: Upload },
-  { href: "/settings", name: "Store settings", icon: Settings },
+];
+const manageNav = [
+  { href: "/imports", name: "Update data", icon: Upload },
+  { href: "/settings", name: "Settings", icon: Settings },
 ];
 export function Workspace({ children }: { children: ReactNode }) {
   const router = useRouter(),
@@ -86,9 +88,9 @@ export function Workspace({ children }: { children: ReactNode }) {
         <Link href="/dashboard" className="brand">
           <Logo />
         </Link>
-        <div className="workspace-label">YOUR WORKSPACE</div>
+        <div className="workspace-label">TODAY</div>
         <nav aria-label="Main navigation">
-          {nav.map(({ href, name, icon: Icon }) => (
+          {primaryNav.map(({ href, name, icon: Icon }) => (
             <Link
               onClick={() => setMobile(false)}
               key={href}
@@ -97,7 +99,20 @@ export function Workspace({ children }: { children: ReactNode }) {
             >
               <Icon size={18} />
               {name}
-              {href === "/smart-orders" && <span className="nav-new">NEW</span>}
+            </Link>
+          ))}
+        </nav>
+        <div className="workspace-label manage-label">MANAGE</div>
+        <nav aria-label="Store management">
+          {manageNav.map(({ href, name, icon: Icon }) => (
+            <Link
+              onClick={() => setMobile(false)}
+              key={href}
+              href={href}
+              className={pathname.startsWith(href) ? "active" : ""}
+            >
+              <Icon size={18} />
+              {name}
             </Link>
           ))}
         </nav>
