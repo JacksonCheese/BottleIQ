@@ -3,13 +3,19 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  CalendarDays,
   CircleDollarSign,
   ShoppingCart,
   TriangleAlert,
 } from "lucide-react";
+import {
+  ActionQueue,
+  DashboardNotice,
+  DashboardSkeleton,
+  DecisionCard,
+  InventorySummary,
+} from "@/components/dashboard";
 import { useWorkspace } from "@/components/workspace";
-import { PageTitle, Panel, Loading, ErrorState, Empty } from "@/components/ui";
+import { PageTitle, ErrorState, Empty } from "@/components/ui";
 import { useResource } from "@/lib/use-resource";
 import { money, decimal } from "@/lib/api";
 import type { Dashboard } from "@/lib/types";
@@ -23,17 +29,34 @@ export default function DashboardPage() {
   } = useResource<Dashboard>(`/dashboard?store_id=${store.id}`);
 
   if (error) return <ErrorState message={error} retry={reload} />;
-  if (!dashboard) return <Loading />;
+  if (!dashboard) return <DashboardSkeleton />;
 
   const cashTiedUp = dashboard.slow_value + dashboard.dead_value;
+  const orderItems = dashboard.actions.slice(0, 3).map((product) => ({
+    id: product.product_id,
+    name: product.product_name,
+    detail: `Order ${product.recommended_cases} cases · ${decimal(product.days_of_supply)} days left`,
+    href: `/products/${product.product_id}`,
+    value: money(product.estimated_cost),
+  }));
+  const pauseItems = dashboard.cash_tied_up.slice(0, 3).map((product) => ({
+    id: product.product_id,
+    name: product.product_name,
+    detail:
+      product.days_of_supply === null
+        ? "No recent sales"
+        : `${decimal(product.days_of_supply)} days of stock`,
+    href: `/products/${product.product_id}`,
+    value: money(product.inventory_value),
+  }));
 
   return (
     <>
       <PageTitle
-        eyebrow="TODAY"
+        eyebrow="TODAY’S PRIORITIES"
         title={`Good morning, ${user.name.split(" ")[0]}.`}
       >
-        Here are the three things worth looking at in your store.
+        Start with the decisions that protect availability and cash flow.
       </PageTitle>
 
       {!dashboard.product_count ? (
@@ -49,182 +72,70 @@ export default function DashboardPage() {
         </Empty>
       ) : (
         <>
-          <div className="decision-grid">
+          <div className="dashboard-decision-grid">
             <DecisionCard
-              eyebrow="ORDER THIS WEEK"
-              title={money(dashboard.order_cost)}
+              label="BUILD THIS WEEK’S ORDER"
+              value={money(dashboard.order_cost)}
               description={`${dashboard.recommended_reorders} products are ready for review.`}
               href="/smart-orders"
-              action="Review order"
-              icon={<ShoppingCart size={22} />}
-              primary
+              action="Review suggested order"
+              icon={<ShoppingCart aria-hidden="true" size={23} />}
+              tone="primary"
             />
             <DecisionCard
-              eyebrow="RUNNING LOW"
-              title={`${dashboard.stockout_risks} products`}
-              description="These may run out before your next delivery."
+              label="PREVENT STOCKOUTS"
+              value={`${dashboard.stockout_risks} products`}
+              description="Likely to run out before the next delivery."
               href="/inventory?status=stockout"
-              action="See what’s low"
-              icon={<TriangleAlert size={22} />}
+              action="Review low stock"
+              icon={<TriangleAlert aria-hidden="true" size={23} />}
               tone="warning"
             />
             <DecisionCard
-              eyebrow="CASH TIED UP"
-              title={money(cashTiedUp)}
-              description="Slow and dead stock that deserves a closer look."
+              label="FREE TRAPPED CASH"
+              value={money(cashTiedUp)}
+              description="Slow and dead stock worth a closer look."
               href="/inventory?status=slow"
               action="Review slow stock"
-              icon={<CircleDollarSign size={22} />}
+              icon={<CircleDollarSign aria-hidden="true" size={23} />}
+              tone="neutral"
             />
           </div>
 
           {dashboard.missing_cost_count > 0 && (
-            <div className="simple-notice">
-              <TriangleAlert size={16} />
-              <span>
-                {dashboard.missing_cost_count}{" "}
-                {dashboard.missing_cost_count === 1
-                  ? "product is"
-                  : "products are"}{" "}
-                missing a cost, so{" "}
-                {dashboard.missing_cost_count === 1 ? "it" : "they"}{" "}
-                {dashboard.missing_cost_count === 1 ? "is" : "are"} not included
-                in order totals.
-              </span>
-              <Link href="/alerts">Fix it</Link>
-            </div>
+            <DashboardNotice missingCostCount={dashboard.missing_cost_count} />
           )}
 
-          <div className="simple-dashboard-grid">
-            <Panel
-              title="Start here"
-              subtitle="The most urgent items to order"
-              link={{ href: "/smart-orders", text: "See full order" }}
-            >
-              <div className="simple-action-list">
-                {dashboard.actions.slice(0, 3).map((product) => (
-                  <Link
-                    href={`/products/${product.product_id}`}
-                    className="simple-action-row"
-                    key={product.product_id}
-                  >
-                    <span className="simple-action-icon">
-                      <ShoppingCart size={17} />
-                    </span>
-                    <div>
-                      <strong>{product.product_name}</strong>
-                      <p>
-                        Order {product.recommended_cases} cases · Only{" "}
-                        {decimal(product.days_of_supply)} days left
-                      </p>
-                    </div>
-                    <ArrowRight size={16} />
-                  </Link>
-                ))}
-                {!dashboard.actions.length && (
-                  <div className="simple-empty-row">
-                    Nothing needs ordering right now.
-                  </div>
-                )}
-              </div>
-            </Panel>
-
-            <Panel
+          <div className="dashboard-queue-grid">
+            <ActionQueue
+              title="Order first"
+              subtitle="Products most likely to run out"
+              href="/smart-orders"
+              linkText="See full order"
+              items={orderItems}
+              emptyMessage="Nothing needs ordering right now."
+              icon={ShoppingCart}
+              tone="order"
+            />
+            <ActionQueue
               title="Pause buying"
               subtitle="Products holding the most cash"
-              link={{
-                href: "/inventory?status=slow",
-                text: "See all slow stock",
-              }}
-            >
-              <div className="simple-action-list">
-                {dashboard.cash_tied_up.slice(0, 3).map((product) => (
-                  <Link
-                    href={`/products/${product.product_id}`}
-                    className="simple-action-row"
-                    key={product.product_id}
-                  >
-                    <span className="simple-action-icon muted">
-                      <CircleDollarSign size={17} />
-                    </span>
-                    <div>
-                      <strong>{product.product_name}</strong>
-                      <p>
-                        {product.days_of_supply === null
-                          ? "No recent sales"
-                          : `${decimal(product.days_of_supply)} days of stock`}
-                      </p>
-                    </div>
-                    <span className="simple-row-value">
-                      {money(product.inventory_value)}
-                    </span>
-                  </Link>
-                ))}
-                {!dashboard.cash_tied_up.length && (
-                  <div className="simple-empty-row">
-                    No slow inventory needs attention.
-                  </div>
-                )}
-              </div>
-            </Panel>
+              href="/inventory?status=slow"
+              linkText="See all slow stock"
+              items={pauseItems}
+              emptyMessage="No slow inventory needs attention."
+              icon={CircleDollarSign}
+              tone="cash"
+            />
           </div>
 
-          <section className="inventory-snapshot">
-            <div>
-              <CalendarDays size={16} />
-              <span>
-                Inventory updated {dashboard.latest_snapshot || "not yet"}
-              </span>
-            </div>
-            <div>
-              <span>Total inventory value</span>
-              <strong>{money(dashboard.inventory_value)}</strong>
-            </div>
-            <Link href="/inventory">
-              View all {dashboard.product_count} products
-              <ArrowRight size={15} />
-            </Link>
-          </section>
+          <InventorySummary
+            latestSnapshot={dashboard.latest_snapshot}
+            inventoryValue={money(dashboard.inventory_value)}
+            productCount={dashboard.product_count}
+          />
         </>
       )}
     </>
-  );
-}
-
-function DecisionCard({
-  eyebrow,
-  title,
-  description,
-  href,
-  action,
-  icon,
-  primary = false,
-  tone = "",
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  href: string;
-  action: string;
-  icon: React.ReactNode;
-  primary?: boolean;
-  tone?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`decision-card ${primary ? "primary" : ""} ${tone}`}
-    >
-      <div className="decision-card-top">
-        <span>{eyebrow}</span>
-        <span className="decision-icon">{icon}</span>
-      </div>
-      <strong>{title}</strong>
-      <p>{description}</p>
-      <span className="decision-action">
-        {action}
-        <ArrowRight size={15} />
-      </span>
-    </Link>
   );
 }
