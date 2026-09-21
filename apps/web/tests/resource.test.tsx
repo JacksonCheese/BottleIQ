@@ -16,12 +16,10 @@ it("loads API data after an initial loading state", async () => {
 it("surfaces backend validation errors", async () => {
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue({
-        ok: false,
-        json: async () => ({ detail: "Upload inventory first" }),
-      }),
+    vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ detail: "Upload inventory first" }),
+    }),
   );
   const { result } = renderHook(() => useResource("/dashboard"));
   await waitFor(() =>

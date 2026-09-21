@@ -69,13 +69,15 @@ export function AuthForm({ signup = false }: { signup?: boolean }) {
             Password
             <input
               name="password"
+              aria-label="Password"
+              aria-describedby="password-help"
               type="password"
               required
               minLength={12}
               maxLength={128}
               autoComplete={signup ? "new-password" : "current-password"}
             />
-            <small>At least 12 characters.</small>
+            <small id="password-help">At least 12 characters.</small>
           </label>
           {error && <ErrorState message={error} />}
           <button className="button" disabled={busy}>

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+test.use({ reducedMotion: "reduce" });
 test("demo owner can inspect inventory and edit/export a Smart Order", async ({
   page,
 }) => {
@@ -38,6 +39,7 @@ test("demo owner can inspect inventory and edit/export a Smart Order", async ({
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Export CSV" }).click();
   expect((await download).suggestedFilename()).toContain("bottleiq-order-");
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "../../docs/screenshots/smart-order.png",
     fullPage: true,
@@ -81,15 +83,13 @@ test("new owner can sign up, create a store, map CSV columns, and import data", 
   await page
     .getByRole("link", { name: "Import your data", exact: true })
     .click();
-  await page
-    .getByLabel("CSV file")
-    .setInputFiles({
-      name: "inventory.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from(
-        "Code,product_name,quantity_on_hand,unit_cost,retail_price,vendor,units_per_case\n001,Synthetic Test Whiskey,8,18,29,Test Distributor,12\n",
-      ),
-    });
+  await page.getByLabel("CSV file").setInputFiles({
+    name: "inventory.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      "Code,product_name,quantity_on_hand,unit_cost,retail_price,vendor,units_per_case\n001,Synthetic Test Whiskey,8,18,29,Test Distributor,12\n",
+    ),
+  });
   await page.getByLabel("Map sku", { exact: true }).selectOption("Code");
   await page.getByRole("button", { name: "Validate & import" }).click();
   await expect(page.getByRole("status")).toContainText("1 imported");
@@ -102,13 +102,11 @@ test("new owner can sign up, create a store, map CSV columns, and import data", 
       `${day.toISOString().slice(0, 10)},001,Synthetic Test Whiskey,4,116,29`,
     );
   }
-  await page
-    .getByLabel("CSV file")
-    .setInputFiles({
-      name: "sales.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from(rows.join("\n")),
-    });
+  await page.getByLabel("CSV file").setInputFiles({
+    name: "sales.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(rows.join("\n")),
+  });
   await page.getByRole("button", { name: "Validate & import" }).click();
   await expect(page.getByRole("status")).toContainText("90 imported");
   await page.getByRole("link", { name: "Inventory", exact: true }).click();

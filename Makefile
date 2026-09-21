@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-.PHONY: setup db migrate dev api web seed samples test test-api test-web lint typecheck format build smoke reset-db
+.PHONY: setup db migrate dev api web seed samples test test-api test-web lint typecheck format build smoke verify reset-db
 setup:
 	@test -f .env || cp .env.example .env
 	uv sync --project apps/api --locked
@@ -51,6 +51,9 @@ build:
 
 smoke:
 	cd apps/web && npm run test:e2e
+
+verify:
+	uv run --project apps/api python scripts/verify_demo.py
 
 reset-db:
 	@test "$(CONFIRM)" = "yes" || (echo 'Destructive: run make reset-db CONFIRM=yes only for a disposable local database.'; exit 1)

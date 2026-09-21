@@ -296,6 +296,8 @@ export default function Page() {
               <a
                 className={`button ${dirty ? "disabled" : ""}`}
                 aria-disabled={dirty}
+                role="link"
+                tabIndex={dirty ? -1 : 0}
                 href={
                   dirty ? undefined : `/api/smart-orders/${order.id}/export`
                 }
