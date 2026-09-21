@@ -11,8 +11,24 @@ test("demo owner can inspect inventory and edit/export a Smart Order", async ({
   await expect(
     page.getByRole("heading", { name: "Good morning, Alex." }),
   ).toBeVisible();
-  await expect(page.getByText("ORDER THIS WEEK")).toBeVisible();
-  await expect(page.getByText("Total inventory value")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Build this week’s order/i }),
+  ).toHaveAttribute("href", "/smart-orders");
+  await expect(
+    page.getByRole("link", { name: /Prevent stockouts/i }),
+  ).toHaveAttribute("href", "/inventory?status=stockout");
+  await expect(
+    page.getByRole("link", { name: /Free trapped cash/i }),
+  ).toHaveAttribute("href", "/inventory?status=slow");
+  await expect(
+    page.getByRole("heading", { name: "Order first" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Pause buying" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Inventory summary" }),
+  ).toContainText("Total inventory value");
   await page.screenshot({
     path: "../../docs/screenshots/dashboard.png",
     fullPage: true,
@@ -46,13 +62,25 @@ test("demo owner can inspect inventory and edit/export a Smart Order", async ({
     fullPage: true,
   });
 });
-test("responsive navigation stays usable", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test("responsive dashboard and navigation stay usable", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
   await page.getByRole("button", { name: "Try the Demo" }).click();
   await expect(
     page.getByRole("heading", { name: "Good morning, Alex." }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Build this week’s order/i }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "../../docs/screenshots/mobile-dashboard.png",
+    fullPage: true,
+  });
   await page.getByRole("button", { name: "Toggle navigation" }).click();
   await page.getByRole("link", { name: "Update data", exact: true }).click();
   await expect(
