@@ -83,6 +83,17 @@ class IncomingUpdate(BaseModel):
     status: Literal["resolved"]
 
 
+class ReceiptInput(BaseModel):
+    quantity_units: int = Field(ge=1, le=1_000_000)
+
+
+class ReceiptView(BaseModel):
+    id: str
+    quantity_units: int
+    received_at: datetime
+    recorded_by_user_id: str
+
+
 class IncomingView(BaseModel):
     id: str
     store_id: str
@@ -91,6 +102,10 @@ class IncomingView(BaseModel):
     expected_at: date
     reference: str | None
     status: Literal["open", "resolved"]
+    received_units: int = 0
+    remaining_units: int = 0
+    last_received_at: datetime | None = None
+    receipts: list[ReceiptView] = Field(default_factory=list)
 
 
 class VendorInput(BaseModel):

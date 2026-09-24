@@ -194,6 +194,26 @@ class IncomingStock(Identity, Tenant, Base):
     )
 
 
+class StockReceipt(Identity, Tenant, Base):
+    __tablename__ = "stock_receipts"
+    store_id: Mapped[str] = mapped_column(String(36))
+    product_id: Mapped[str] = mapped_column(String(36))
+    incoming_stock_id: Mapped[str] = mapped_column(ForeignKey("incoming_stock.id"))
+    recorded_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    quantity_units: Mapped[int] = mapped_column(Integer)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["store_id", "organization_id"], ["stores.id", "stores.organization_id"]
+        ),
+        ForeignKeyConstraint(
+            ["product_id", "organization_id"], ["products.id", "products.organization_id"]
+        ),
+        CheckConstraint("quantity_units > 0"),
+        Index("ix_stock_receipts_store_product", "store_id", "product_id"),
+    )
+
+
 class ImportJob(Identity, Tenant, Base):
     __tablename__ = "import_jobs"
     store_id: Mapped[str] = mapped_column(String(36))

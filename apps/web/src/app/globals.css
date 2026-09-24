@@ -1432,16 +1432,35 @@ tbody tr:hover {
 }
 .incoming-item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 14px 0;
   border-bottom: 1px solid var(--border);
 }
+.incoming-item .incoming-form {
+  margin-top: 0;
+}
+.incoming-item > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+}
 .incoming-item p {
   margin: 5px 0 0;
   color: #8b9481;
   font-size: 11px;
+}
+.incoming-receipts {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  color: #56654a;
+  font-size: 11px;
+}
+.incoming-receipts li + li {
+  margin-top: 3px;
 }
 .incoming-form {
   display: flex;

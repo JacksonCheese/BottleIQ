@@ -11,6 +11,8 @@ erDiagram
   STORE ||--o{ SALE : records
   STORE ||--o{ INVENTORY_SNAPSHOT : measures
   STORE ||--o{ PURCHASE : receives
+  STORE ||--o{ INCOMING_STOCK : expects
+  INCOMING_STOCK ||--o{ STOCK_RECEIPT : receives
   PRODUCT ||--o{ SALE : sells
   PRODUCT ||--o{ INVENTORY_SNAPSHOT : stocks
   PRODUCT ||--o{ PURCHASE : buys
@@ -36,10 +38,10 @@ Notable constraints:
 - Case packs must be positive. Vendor lead times cannot be negative.
 - Store/product facts and date indexes support common lookups.
 
-`InventorySnapshot` is a point-in-time quantity, not a perpetually updated stock ledger. Purchases do not automatically increment it; sales do not decrement it. Import fresh snapshots regularly. Snapshot cost is the latest cost basis used for intelligence; invoice history is retained for future landed-cost analysis. Returns, transfers, damage, shrink, and purchase-order receipts are outside the initial ledger.
+`InventorySnapshot` is a point-in-time quantity, not a perpetually updated stock ledger. Purchases do not automatically increment it; sales do not decrement it. `IncomingStock` records expected units and `StockReceipt` records each actual receipt, timestamp, and recording user. Analytics add receipts after the latest physical snapshot to estimated on-hand stock and subtract them from open incoming; a later snapshot supersedes those adjustments. Import fresh snapshots regularly. Snapshot cost is the latest cost basis used for intelligence; invoice history is retained for future landed-cost analysis. Returns, transfers, damage, and shrink remain outside this limited receipt ledger.
 
 `ReorderRecommendation` retains generated results. `SmartOrder` has a version counter and immutable original explanations/cost basis. A write locks the order in PostgreSQL and checks the client's version before applying case edits. A zero-case line is an exclusion, retained in the draft but omitted from export. User edits never change the underlying inventory.
 
 `AuthSession` stores only a SHA-256 digest of a cryptographically random token and a 12-hour expiration. Password hashes use Argon2. Logout removes the session. There are no plaintext passwords or stored uploaded CSV files.
 
-Migration: `apps/api/alembic/versions/8939170ed5ce_initial_tenant_scoped_domain.py`. It is an explicit frozen schema migration, not a call to current metadata. Do not edit existing migrations once deployed; create a new revision.
+Migrations are explicit frozen revisions, not calls to current metadata. Do not edit existing migrations once deployed; create a new revision.

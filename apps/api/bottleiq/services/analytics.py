@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import polars as pl
@@ -11,6 +11,7 @@ from bottleiq.models import (
     Product,
     ReorderRecommendation,
     Sale,
+    StockReceipt,
     Store,
     Vendor,
 )
@@ -20,6 +21,11 @@ from bottleiq.services.calculations import (
     demand_metrics,
     stockout_before_replenishment,
 )
+
+
+def utc(value: datetime) -> datetime:
+    """SQLite drops timezone metadata; model timestamps are UTC in both databases."""
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 def analyze(
@@ -43,10 +49,22 @@ def analyze(
             InventorySnapshot.organization_id == org,
             InventorySnapshot.snapshot_at <= today,
         )
-        .order_by(InventorySnapshot.snapshot_at)
+        .order_by(InventorySnapshot.snapshot_at, InventorySnapshot.created_at, InventorySnapshot.id)
     ).all()
     latest = {s.product_id: s for s in snapshots}
     incoming_by_product: dict[str, list[IncomingStock]] = {}
+    receipts_by_product: dict[str, list[StockReceipt]] = {}
+    received_by_shipment: dict[str, int] = {}
+    for receipt in db.scalars(
+        select(StockReceipt).where(
+            StockReceipt.store_id == store.id,
+            StockReceipt.organization_id == org,
+        )
+    ):
+        receipts_by_product.setdefault(receipt.product_id, []).append(receipt)
+        received_by_shipment[receipt.incoming_stock_id] = (
+            received_by_shipment.get(receipt.incoming_stock_id, 0) + receipt.quantity_units
+        )
     for shipment in db.scalars(
         select(IncomingStock).where(
             IncomingStock.store_id == store.id,
@@ -99,11 +117,23 @@ def analyze(
         vendor = vendors.get(p.default_vendor_id or "")
         lead = vendor.default_lead_time_days if vendor else 4
         hand = snap.quantity_on_hand if snap else 0
+        # An imported physical count supersedes earlier receipts. Keep receipts
+        # after that count separate so a later CSV import cannot double-count them.
+        if snap:
+            for receipt in receipts_by_product.get(p.id, []):
+                received_at = utc(receipt.received_at)
+                received_date = received_at.astimezone(ZoneInfo(store.timezone)).date()
+                if received_date > today:
+                    continue
+                if snap.snapshot_at < received_date or (
+                    snap.snapshot_at == received_date and utc(snap.created_at) <= received_at
+                ):
+                    hand += receipt.quantity_units
         shipments = incoming_by_product.get(p.id, [])
         overdue_incoming = any(shipment.expected_at < today for shipment in shipments)
         horizon_end = today + timedelta(days=lead + options.target_days)
         incoming_units = sum(
-            shipment.quantity_units
+            shipment.quantity_units - received_by_shipment.get(shipment.id, 0)
             for shipment in shipments
             if today <= shipment.expected_at <= horizon_end
         )
@@ -132,7 +162,9 @@ def analyze(
             days_until_arrival = (shipment.expected_at - today).days
             if 0 <= days_until_arrival <= lead:
                 incoming_by_day[days_until_arrival] = (
-                    incoming_by_day.get(days_until_arrival, 0) + shipment.quantity_units
+                    incoming_by_day.get(days_until_arrival, 0)
+                    + shipment.quantity_units
+                    - received_by_shipment.get(shipment.id, 0)
                 )
         risk = stockout_before_replenishment(
             hand, demand.average, demand.safety, lead, incoming_by_day

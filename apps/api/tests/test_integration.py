@@ -160,6 +160,105 @@ def test_confirmed_incoming_reduces_live_order_and_can_be_resolved(db, client):
     assert analyze(db, store)[0].recommended_cases == 8
 
 
+def test_partial_receipt_moves_only_arrived_units_into_estimated_stock(db, client):
+    store = seed_demo(db, date.today(), product_count=1)
+    metric = analyze(db, store)[0]
+    assert client.post("/auth/demo").status_code == 200
+    created = client.post(
+        "/incoming-stock",
+        json={
+            "store_id": store.id,
+            "product_id": metric.product_id,
+            "quantity_units": 72,
+            "expected_at": (date.today() + timedelta(days=1)).isoformat(),
+        },
+    )
+    shipment_id = created.json()["id"]
+    partial = client.post(f"/incoming-stock/{shipment_id}/receive", json={"quantity_units": 36})
+    assert partial.status_code == 200
+    assert partial.json()["received_units"] == 36
+    assert partial.json()["remaining_units"] == 36
+    assert partial.json()["status"] == "open"
+    assert len(partial.json()["receipts"]) == 1
+    assert partial.json()["receipts"][0]["quantity_units"] == 36
+    current = analyze(db, store)[0]
+    assert current.current_quantity == 44
+    assert current.incoming_units == 36
+    assert current.inventory_position == 80
+    assert (
+        client.post(
+            f"/incoming-stock/{shipment_id}/receive", json={"quantity_units": 37}
+        ).status_code
+        == 422
+    )
+    completed = client.post(f"/incoming-stock/{shipment_id}/receive", json={"quantity_units": 36})
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "resolved"
+    assert completed.json()["remaining_units"] == 0
+    assert len(completed.json()["receipts"]) == 2
+    assert (
+        client.post(
+            f"/incoming-stock/{shipment_id}/receive", json={"quantity_units": 1}
+        ).status_code
+        == 409
+    )
+    assert analyze(db, store)[0].current_quantity == 80
+    assert analyze(db, store)[0].incoming_units == 0
+
+    # A later physical count supersedes the earlier receipt adjustments.
+    previous = db.scalar(
+        select(InventorySnapshot).where(
+            InventorySnapshot.store_id == store.id,
+            InventorySnapshot.product_id == metric.product_id,
+        )
+    )
+    assert previous is not None
+    db.add(
+        InventorySnapshot(
+            organization_id=store.organization_id,
+            store_id=store.id,
+            product_id=metric.product_id,
+            source_key="post-receipt-physical-count",
+            content_hash="post-receipt-physical-count",
+            snapshot_at=date.today(),
+            quantity_on_hand=78,
+            unit_cost=previous.unit_cost,
+            retail_price=previous.retail_price,
+        )
+    )
+    db.commit()
+    assert analyze(db, store)[0].current_quantity == 78
+
+
+def test_closing_short_delivery_keeps_only_actual_receipt(db, client):
+    store = seed_demo(db, date.today(), product_count=1)
+    metric = analyze(db, store)[0]
+    assert client.post("/auth/demo").status_code == 200
+    created = client.post(
+        "/incoming-stock",
+        json={
+            "store_id": store.id,
+            "product_id": metric.product_id,
+            "quantity_units": 12,
+            "expected_at": date.today().isoformat(),
+        },
+    )
+    shipment_id = created.json()["id"]
+    assert (
+        client.post(
+            f"/incoming-stock/{shipment_id}/receive", json={"quantity_units": 5}
+        ).status_code
+        == 200
+    )
+    closed = client.patch(f"/incoming-stock/{shipment_id}", json={"status": "resolved"})
+    assert closed.status_code == 200
+    assert closed.json()["received_units"] == 5
+    assert closed.json()["remaining_units"] == 7
+    current = analyze(db, store)[0]
+    assert current.current_quantity == 13
+    assert current.incoming_units == 0
+
+
 def test_overdue_incoming_holds_order_until_review(db):
     as_of = date.today()
     store = seed_demo(db, as_of, product_count=1)

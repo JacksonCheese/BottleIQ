@@ -18,7 +18,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   } = useResource<Metric>(`/products/${id}?store_id=${store.id}`);
   const vendors = useResource<Vendor[]>("/vendors");
   const incoming = useResource<Incoming[]>(
-    `/incoming-stock?store_id=${store.id}&product_id=${id}`,
+    `/incoming-stock?store_id=${store.id}&product_id=${id}&include_closed=true`,
   );
   const [saveError, setSaveError] = useState("");
   const [incomingError, setIncomingError] = useState("");
@@ -57,7 +57,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       </div>
       <div className="product-metrics">
         {[
-          ["On hand", `${m.current_quantity} units`],
+          ["Estimated on hand", `${m.current_quantity} units`],
           ["Confirmed incoming", `${m.incoming_units} units`],
           ["Inventory position", `${m.inventory_position} units`],
           ["Inventory value", money(m.inventory_value)],
@@ -81,14 +81,14 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         ))}
       </div>
       <Panel
-        title="Stock already on the way"
-        subtitle="Count confirmed deliveries before building a new order"
+        title="Deliveries & receiving"
+        subtitle="Record what actually arrives, including partial deliveries"
       >
         <div className="padded">
           <p className="muted-copy">
-            Deliveries due within the planning window reduce the suggested
-            order. Overdue deliveries pause it until you review them. A new
-            draft is needed after any change here.
+            Received units move from incoming to estimated on-hand stock. A
+            fresh inventory count supersedes earlier receipts; verify the count
+            before purchasing. Create a new Smart Order draft after changes.
           </p>
           {incoming.error && (
             <ErrorState message={incoming.error} retry={incoming.reload} />
@@ -98,44 +98,110 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
             {incoming.data?.map((item) => (
               <div className="incoming-item" key={item.id}>
                 <div>
-                  <strong>{item.quantity_units} units</strong>
+                  <strong>
+                    {item.received_units} / {item.quantity_units} units received
+                  </strong>
                   <p>
                     Expected {item.expected_at}
                     {item.reference ? ` · ${item.reference}` : ""}
+                    {item.status === "resolved"
+                      ? item.remaining_units === 0
+                        ? " · Complete"
+                        : ` · Closed (${item.remaining_units} not received)`
+                      : ` · ${item.remaining_units} still expected`}
                   </p>
+                  {item.receipts.length > 0 && (
+                    <ul className="incoming-receipts">
+                      {item.receipts.map((receipt) => (
+                        <li key={receipt.id}>
+                          +{receipt.quantity_units} units received ·{" "}
+                          {new Date(receipt.received_at).toLocaleString()}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-                <button
-                  className="button secondary"
-                  type="button"
-                  disabled={incomingBusy || user.role === "viewer"}
-                  onClick={async () => {
-                    setIncomingBusy(true);
-                    setIncomingError("");
-                    try {
-                      await api(`/incoming-stock/${item.id}`, {
-                        method: "PATCH",
-                        body: JSON.stringify({ status: "resolved" }),
-                      });
-                      incoming.reload();
-                      reload();
-                    } catch (e) {
-                      setIncomingError((e as Error).message);
-                    } finally {
-                      setIncomingBusy(false);
-                    }
-                  }}
-                >
-                  Mark handled
-                </button>
+                {item.status === "open" && user.role !== "viewer" && (
+                  <div>
+                    <form
+                      className="incoming-form"
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        const form = e.currentTarget;
+                        const quantity = Number(
+                          new FormData(form).get("received_units"),
+                        );
+                        setIncomingBusy(true);
+                        setIncomingError("");
+                        try {
+                          await api(`/incoming-stock/${item.id}/receive`, {
+                            method: "POST",
+                            body: JSON.stringify({ quantity_units: quantity }),
+                          });
+                          form.reset();
+                          incoming.reload();
+                          reload();
+                        } catch (e) {
+                          setIncomingError((e as Error).message);
+                        } finally {
+                          setIncomingBusy(false);
+                        }
+                      }}
+                    >
+                      <label>
+                        Units arrived
+                        <input
+                          name="received_units"
+                          type="number"
+                          min={1}
+                          max={item.remaining_units}
+                          required
+                        />
+                      </label>
+                      <button className="button" disabled={incomingBusy}>
+                        Record receipt
+                      </button>
+                    </form>
+                    <button
+                      className="button secondary"
+                      type="button"
+                      disabled={incomingBusy}
+                      onClick={async () => {
+                        if (
+                          !window.confirm(
+                            `Close ${item.remaining_units} unreceived units? This cannot be undone.`,
+                          )
+                        )
+                          return;
+                        setIncomingBusy(true);
+                        setIncomingError("");
+                        try {
+                          await api(`/incoming-stock/${item.id}`, {
+                            method: "PATCH",
+                            body: JSON.stringify({ status: "resolved" }),
+                          });
+                          incoming.reload();
+                          reload();
+                        } catch (e) {
+                          setIncomingError((e as Error).message);
+                        } finally {
+                          setIncomingBusy(false);
+                        }
+                      }}
+                    >
+                      Close remaining units
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
             {incoming.data?.length === 0 && (
-              <p className="muted-copy">No confirmed deliveries recorded.</p>
+              <p className="muted-copy">No deliveries recorded.</p>
             )}
           </div>
           <p className="muted-copy">
-            Mark handled after a new inventory snapshot includes the delivery,
-            or if it was cancelled.
+            Close remaining units only if they will not arrive. Recording a
+            receipt does not change an existing CSV snapshot or invoice history.
           </p>
           {user.role !== "viewer" && (
             <form

@@ -111,6 +111,10 @@ def test_viewer_cannot_mutate(client, db, store):
         == 403
     )
     assert client.get("/stores").status_code == 200
+    assert (
+        client.post("/incoming-stock/nonexistent/receive", json={"quantity_units": 1}).status_code
+        == 403
+    )
 
 
 def test_csrf_origin_rejected(client):

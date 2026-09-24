@@ -13,7 +13,7 @@ BottleIQ is an inventory intelligence MVP for independent liquor stores and smal
 - Searchable, filterable, sortable inventory, ABC classification, product detail and 90-day sales charts.
 - Explainable demand, safety stock, reorder points, days supply, margin, turnover, GMROI, and stock alerts.
 - Distributor Smart Orders with configurable demand window, target supply, service level, case rounding, editable/excluded lines, minimum-order warnings, and CSV export.
-- Confirmed incoming-stock tracking by product and store, with expected dates, order references, and overdue-delivery holds.
+- Confirmed incoming-stock tracking and partial receiving, with expected dates, order references, and overdue-delivery holds.
 - Product/distributor configuration, including case packs and lead times.
 - Seeded synthetic demo, migrations, PostgreSQL development service, unit/integration/browser tests, and CI.
 
@@ -105,7 +105,7 @@ Daily sales exports need one row per date/SKU; transaction exports need stable `
 - **GMROI:** 90-day estimated gross profit / estimated average inventory cost; explicitly an estimate using available snapshots and latest unit cost.
 - **ABC:** descending 90-day revenue with cumulative 80% / 95% thresholds. Boundary-crossing product stays in the earlier class.
 
-Missing cost/vendor, stale inventory/sales (>7 days), insufficient sales history (<14 days), or an overdue incoming delivery hold recommendations. Invoice history is stored but does not currently replace the snapshot cost basis. Incoming stock must be entered manually; drafts do not create incoming records, and promotions are not forecast. [All definitions and assumptions](docs/analytics-engine.md).
+Missing cost/vendor, stale inventory/sales (>7 days), insufficient sales history (<14 days), or an overdue incoming delivery hold recommendations. Received units are added to estimated on-hand stock until a newer physical inventory snapshot supersedes them; partial receipts leave the balance incoming. Invoice history is stored but does not currently replace the snapshot cost basis. Incoming stock must be entered manually; drafts do not create incoming records, and promotions are not forecast. [All definitions and assumptions](docs/analytics-engine.md).
 
 ## Testing
 
@@ -172,13 +172,13 @@ Regenerate the API snapshot with `uv run --project apps/api python scripts/expor
 
 ## Current Limitations
 
-This is a working MVP and pilot-validation foundation, not an unattended production service. Significant limitations include no self-service recovery/verified email; no durable import queue or undo; inferred coverage that cannot distinguish missing days from zero sales; no returns/shrink accounting; snapshot rather than perpetual inventory; estimated COGS/GMROI; no reconciliation of open orders; no deployed HTTPS/backups/monitoring or independent security audit. Inventory filtering is client-side, and analytics/caches are not yet optimized for large chains.
+This is a working MVP and pilot-validation foundation, not an unattended production service. Significant limitations include no self-service recovery/verified email; no durable import queue or undo; inferred coverage that cannot distinguish missing days from zero sales; no returns/shrink accounting; snapshot plus receipt estimates rather than perpetual inventory; estimated COGS/GMROI; no automatic link between order drafts and incoming records; no deployed HTTPS/backups/monitoring or independent security audit. Inventory filtering is client-side, and analytics/caches are not yet optimized for large chains.
 
 Current deployment and pilot-readiness assessment: [engineering report](docs/engineering-report.md).
 
 ## Roadmap
 
-Next: validate real POS exports and corrections, secure hosted onboarding, outstanding-order/receiving state, measure pilot ROI, and validate scale/forecast accuracy. Later: POS and distributor catalog integrations, advanced forecasting, promotional demand detection, automatic purchase-order workflows with review, multi-store transfers, anomaly detection, pricing intelligence, and an AI natural-language analyst. [Prioritized roadmap](docs/roadmap.md).
+Next: validate real POS exports and corrections, secure hosted onboarding, link placed orders to incoming records, measure pilot ROI, and validate scale/forecast accuracy. Later: POS and distributor catalog integrations, advanced forecasting, promotional demand detection, automatic purchase-order workflows with review, multi-store transfers, anomaly detection, pricing intelligence, and an AI natural-language analyst. [Prioritized roadmap](docs/roadmap.md).
 
 ## GitHub
 

@@ -1079,6 +1079,221 @@
         }
       }
     },
+    "/incoming-stock": {
+      "get": {
+        "tags": [
+          "Incoming stock"
+        ],
+        "summary": "List Incoming",
+        "operationId": "list_incoming_incoming_stock_get",
+        "parameters": [
+          {
+            "name": "store_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Store Id"
+            }
+          },
+          {
+            "name": "product_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          },
+          {
+            "name": "include_closed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Closed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IncomingView"
+                  },
+                  "title": "Response List Incoming Incoming Stock Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Incoming stock"
+        ],
+        "summary": "Create",
+        "operationId": "create_incoming_stock_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncomingInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomingView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/incoming-stock/{shipment_id}/receive": {
+      "post": {
+        "tags": [
+          "Incoming stock"
+        ],
+        "summary": "Receive",
+        "operationId": "receive_incoming_stock__shipment_id__receive_post",
+        "parameters": [
+          {
+            "name": "shipment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shipment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomingView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/incoming-stock/{shipment_id}": {
+      "patch": {
+        "tags": [
+          "Incoming stock"
+        ],
+        "summary": "Resolve",
+        "operationId": "resolve_incoming_stock__shipment_id__patch",
+        "parameters": [
+          {
+            "name": "shipment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shipment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncomingUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomingView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/smart-orders": {
       "post": {
         "tags": [
@@ -1642,6 +1857,147 @@
         ],
         "title": "ImportJobView"
       },
+      "IncomingInput": {
+        "properties": {
+          "store_id": {
+            "type": "string",
+            "title": "Store Id"
+          },
+          "product_id": {
+            "type": "string",
+            "title": "Product Id"
+          },
+          "quantity_units": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Quantity Units"
+          },
+          "expected_at": {
+            "type": "string",
+            "format": "date",
+            "title": "Expected At"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "type": "object",
+        "required": [
+          "store_id",
+          "product_id",
+          "quantity_units",
+          "expected_at"
+        ],
+        "title": "IncomingInput"
+      },
+      "IncomingUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "resolved",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "IncomingUpdate"
+      },
+      "IncomingView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "store_id": {
+            "type": "string",
+            "title": "Store Id"
+          },
+          "product_id": {
+            "type": "string",
+            "title": "Product Id"
+          },
+          "quantity_units": {
+            "type": "integer",
+            "title": "Quantity Units"
+          },
+          "expected_at": {
+            "type": "string",
+            "format": "date",
+            "title": "Expected At"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "resolved"
+            ],
+            "title": "Status"
+          },
+          "received_units": {
+            "type": "integer",
+            "title": "Received Units",
+            "default": 0
+          },
+          "remaining_units": {
+            "type": "integer",
+            "title": "Remaining Units",
+            "default": 0
+          },
+          "last_received_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Received At"
+          },
+          "receipts": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptView"
+            },
+            "type": "array",
+            "title": "Receipts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "store_id",
+          "product_id",
+          "quantity_units",
+          "expected_at",
+          "reference",
+          "status"
+        ],
+        "title": "IncomingView"
+      },
       "Metrics": {
         "properties": {
           "product_id": {
@@ -1720,6 +2076,14 @@
           "current_quantity": {
             "type": "integer",
             "title": "Current Quantity"
+          },
+          "incoming_units": {
+            "type": "integer",
+            "title": "Incoming Units"
+          },
+          "inventory_position": {
+            "type": "integer",
+            "title": "Inventory Position"
           },
           "unit_cost": {
             "anyOf": [
@@ -1924,6 +2288,8 @@
           "units_per_case",
           "snapshot_at",
           "current_quantity",
+          "incoming_units",
+          "inventory_position",
           "unit_cost",
           "retail_price",
           "inventory_value",
@@ -2217,6 +2583,50 @@
           "brand"
         ],
         "title": "ProductEdit"
+      },
+      "ReceiptInput": {
+        "properties": {
+          "quantity_units": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Quantity Units"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quantity_units"
+        ],
+        "title": "ReceiptInput"
+      },
+      "ReceiptView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "quantity_units": {
+            "type": "integer",
+            "title": "Quantity Units"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          },
+          "recorded_by_user_id": {
+            "type": "string",
+            "title": "Recorded By User Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "quantity_units",
+          "received_at",
+          "recorded_by_user_id"
+        ],
+        "title": "ReceiptView"
       },
       "RejectedRow": {
         "properties": {
