@@ -1,10 +1,11 @@
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import pytest
 from sqlalchemy import select
 
-from bottleiq.models import IncomingStock, InventorySnapshot
+from bottleiq.models import IncomingStock, InventorySnapshot, OrganizationMember, SmartOrderAudit
 from bottleiq.schemas import AnalysisOptions, OrderEdit, OrderInput, OrderLineEdit
 from bottleiq.seed import seed_demo
 from bottleiq.services.analytics import alerts_for, analyze
@@ -27,10 +28,8 @@ def test_seed_analytics_recommendations_order(db, today):
     assert by_sku["BTL-0079"].vendor_id is None
     assert "missing vendor" in by_sku["BTL-0079"].blockers
     assert any(a.title == "Unusual demand" for a in alerts_for(metrics))
-    # Creation uses today's date; fixed as_of is intentionally today's CI date-independent seed below.
-    from datetime import date
-
-    shift = date.today() - today
+    # Creation uses the store's local date; the fixed fixture keeps the seed deterministic.
+    shift = datetime.now(ZoneInfo(store.timezone)).date() - today
     if shift.days:
         from bottleiq.models import Sale
 
@@ -48,24 +47,34 @@ def test_seed_analytics_recommendations_order(db, today):
     )
     line = next(item for item in detail["lines"] if item["product_id"] == fast.product_id)
     assert line["units"] == 96
+    editor_id = db.scalar(
+        select(OrganizationMember.user_id).where(
+            OrganizationMember.organization_id == store.organization_id
+        )
+    )
     edit_order(
         db,
         order,
         OrderEdit(
             version=order.version, lines=[OrderLineEdit(product_id=fast.product_id, cases=2)]
         ),
+        editor_id,
     )
     updated = order_detail(db, order)
     assert updated["estimated_total_cost"] == pytest.approx(
         detail["estimated_total_cost"] - 1728 + 432
     )
     assert "Cedar Ridge" in export_order(updated)
+    audit = db.scalar(select(SmartOrderAudit).where(SmartOrderAudit.smart_order_id == order.id))
+    assert audit.user_id == editor_id
+    assert audit.changes == [{"product_id": fast.product_id, "before_cases": 8, "after_cases": 2}]
     edit_order(
         db,
         order,
         OrderEdit(
             version=order.version, lines=[OrderLineEdit(product_id=fast.product_id, cases=0)]
         ),
+        editor_id,
     )
     assert fast.sku not in export_order(order_detail(db, order))
 
@@ -105,21 +114,56 @@ def test_configurable_demand_window(db, today):
 
 
 def test_stale_order_version_rejected(db, today):
-    from datetime import date
-
     from fastapi import HTTPException
 
-    store = seed_demo(db, date.today(), product_count=1)
+    store = seed_demo(db, datetime.now(ZoneInfo("America/Los_Angeles")).date(), product_count=1)
     metric = analyze(db, store)[0]
     order = create_order(db, store, OrderInput(store_id=store.id, vendor_id=metric.vendor_id))
-    edit_order(db, order, OrderEdit(version=1, lines=[]))
+    editor_id = db.scalar(
+        select(OrganizationMember.user_id).where(
+            OrganizationMember.organization_id == store.organization_id
+        )
+    )
+    edit_order(db, order, OrderEdit(version=1, lines=[]), editor_id)
     with pytest.raises(HTTPException) as error:
-        edit_order(db, order, OrderEdit(version=1, lines=[]))
+        edit_order(db, order, OrderEdit(version=1, lines=[]), editor_id)
     assert error.value.status_code == 409
 
 
+def test_order_edit_history_records_actor_and_blocks_other_tenant(db, client):
+    store = seed_demo(db, datetime.now(ZoneInfo("America/Los_Angeles")).date(), product_count=1)
+    metric = analyze(db, store)[0]
+    assert client.post("/auth/demo").status_code == 200
+    created = client.post(
+        "/smart-orders", json={"store_id": store.id, "vendor_id": metric.vendor_id}
+    )
+    assert created.status_code == 201
+    order_id = created.json()["id"]
+    edited = client.patch(
+        f"/smart-orders/{order_id}",
+        json={
+            "version": 1,
+            "lines": [{"product_id": metric.product_id, "cases": 1}],
+        },
+    )
+    assert edited.status_code == 200
+    history = client.get(f"/smart-orders/{order_id}/history")
+    assert history.status_code == 200
+    assert history.json()[0]["edited_by"] == "Alex Morgan"
+    assert history.json()[0]["changes"] == [
+        {"product_id": metric.product_id, "before_cases": 8, "after_cases": 1}
+    ]
+    assert (
+        client.post(
+            "/auth/login", json={"email": "owner@example.com", "password": "test-password-123"}
+        ).status_code
+        == 200
+    )
+    assert client.get(f"/smart-orders/{order_id}/history").status_code == 404
+
+
 def test_confirmed_incoming_reduces_live_order_and_can_be_resolved(db, client):
-    as_of = date.today()
+    as_of = datetime.now(ZoneInfo("America/Los_Angeles")).date()
     store = seed_demo(db, as_of, product_count=1)
     before = analyze(db, store)[0]
     assert before.recommended_cases == 8
@@ -161,7 +205,8 @@ def test_confirmed_incoming_reduces_live_order_and_can_be_resolved(db, client):
 
 
 def test_partial_receipt_moves_only_arrived_units_into_estimated_stock(db, client):
-    store = seed_demo(db, date.today(), product_count=1)
+    as_of = datetime.now(ZoneInfo("America/Los_Angeles")).date()
+    store = seed_demo(db, as_of, product_count=1)
     metric = analyze(db, store)[0]
     assert client.post("/auth/demo").status_code == 200
     created = client.post(
@@ -170,7 +215,7 @@ def test_partial_receipt_moves_only_arrived_units_into_estimated_stock(db, clien
             "store_id": store.id,
             "product_id": metric.product_id,
             "quantity_units": 72,
-            "expected_at": (date.today() + timedelta(days=1)).isoformat(),
+            "expected_at": (as_of + timedelta(days=1)).isoformat(),
         },
     )
     shipment_id = created.json()["id"]
@@ -220,7 +265,7 @@ def test_partial_receipt_moves_only_arrived_units_into_estimated_stock(db, clien
             product_id=metric.product_id,
             source_key="post-receipt-physical-count",
             content_hash="post-receipt-physical-count",
-            snapshot_at=date.today(),
+            snapshot_at=as_of,
             quantity_on_hand=78,
             unit_cost=previous.unit_cost,
             retail_price=previous.retail_price,
@@ -231,7 +276,8 @@ def test_partial_receipt_moves_only_arrived_units_into_estimated_stock(db, clien
 
 
 def test_closing_short_delivery_keeps_only_actual_receipt(db, client):
-    store = seed_demo(db, date.today(), product_count=1)
+    as_of = datetime.now(ZoneInfo("America/Los_Angeles")).date()
+    store = seed_demo(db, as_of, product_count=1)
     metric = analyze(db, store)[0]
     assert client.post("/auth/demo").status_code == 200
     created = client.post(
@@ -240,7 +286,7 @@ def test_closing_short_delivery_keeps_only_actual_receipt(db, client):
             "store_id": store.id,
             "product_id": metric.product_id,
             "quantity_units": 12,
-            "expected_at": date.today().isoformat(),
+            "expected_at": as_of.isoformat(),
         },
     )
     shipment_id = created.json()["id"]
@@ -260,7 +306,7 @@ def test_closing_short_delivery_keeps_only_actual_receipt(db, client):
 
 
 def test_overdue_incoming_holds_order_until_review(db):
-    as_of = date.today()
+    as_of = datetime.now(ZoneInfo("America/Los_Angeles")).date()
     store = seed_demo(db, as_of, product_count=1)
     metric = analyze(db, store)[0]
     db.add(

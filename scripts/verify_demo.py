@@ -5,10 +5,11 @@ import math
 from datetime import timedelta
 from statistics import NormalDist, mean, pstdev
 
+from sqlalchemy import func, select
+
 from bottleiq.db import SessionLocal
 from bottleiq.models import InventorySnapshot, OrganizationMember, Sale, Store, User
 from bottleiq.services.analytics import analyze
-from sqlalchemy import func, select
 
 
 def main() -> None:
@@ -16,12 +17,8 @@ def main() -> None:
         user = db.scalar(select(User).where(User.email == "demo@bottleiq.local"))
         if not user:
             raise SystemExit("Run make seed before verifying demo calculations")
-        member = db.scalar(
-            select(OrganizationMember).where(OrganizationMember.user_id == user.id)
-        )
-        store = db.scalar(
-            select(Store).where(Store.organization_id == member.organization_id)
-        )
+        member = db.scalar(select(OrganizationMember).where(OrganizationMember.user_id == user.id))
+        store = db.scalar(select(Store).where(Store.organization_id == member.organization_id))
         as_of = db.scalar(
             select(func.max(InventorySnapshot.snapshot_at)).where(
                 InventorySnapshot.store_id == store.id
@@ -43,18 +40,12 @@ def main() -> None:
                 .group_by(Sale.sold_at)
             ).all()
             by_day = dict(sales)
-            daily = [
-                int(by_day.get(as_of - timedelta(days=i), 0)) for i in range(1, 61)
-            ]
+            daily = [int(by_day.get(as_of - timedelta(days=i), 0)) for i in range(1, 61)]
             average, sigma = mean(daily), pstdev(daily)
-            safety = (
-                NormalDist().inv_cdf(0.95) * sigma * math.sqrt(metric.lead_time_days)
-            )
+            safety = NormalDist().inv_cdf(0.95) * sigma * math.sqrt(metric.lead_time_days)
             target = average * (metric.lead_time_days + 21) + safety
             cases = (
-                math.ceil(
-                    max(0, target - metric.current_quantity) / metric.units_per_case
-                )
+                math.ceil(max(0, target - metric.inventory_position) / metric.units_per_case)
                 if average
                 else 0
             )
@@ -68,6 +59,8 @@ def main() -> None:
                     "product": metric.product_name,
                     "as_of": str(as_of),
                     "on_hand": metric.current_quantity,
+                    "confirmed_incoming": metric.incoming_units,
+                    "inventory_position": metric.inventory_position,
                     "daily_demand": average,
                     "daily_std": sigma,
                     "lead_days": metric.lead_time_days,

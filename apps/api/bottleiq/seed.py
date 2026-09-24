@@ -6,8 +6,9 @@ import io
 import math
 import random
 import secrets
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -197,7 +198,8 @@ def seed_demo(db: Session, as_of: date | None = None, product_count: int = 96) -
                 )
             )
         db.commit()
-    for kind, content in sample_files(as_of or date.today(), product_count).items():
+    seed_date = as_of or datetime.now(ZoneInfo(store.timezone)).date()
+    for kind, content in sample_files(seed_date, product_count).items():
         job = import_csv(db, store, kind, content, f"demo-{kind}.csv")
         if job.rows_rejected:
             raise ValueError(f"Demo {kind} rejected rows: {job.error_summary[:3]}")

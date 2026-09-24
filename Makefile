@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-.PHONY: setup db migrate dev api web seed samples test test-api test-web lint typecheck format build smoke verify reset-db
+.PHONY: setup db migrate check-migrations dev api web seed samples test test-api test-web lint typecheck format build smoke verify reset-db
 setup:
 	@test -f .env || cp .env.example .env
 	uv sync --project apps/api --locked
@@ -11,10 +11,13 @@ db:
 migrate:
 	cd apps/api && uv run alembic upgrade head
 
+check-migrations:
+	cd apps/api && uv run python -m bottleiq.migrations
+
 dev:
 	python3 scripts/dev.py
 
-api:
+api: check-migrations
 	cd apps/api && uv run uvicorn bottleiq.main:app --reload --host 127.0.0.1 --port 8000
 
 web:

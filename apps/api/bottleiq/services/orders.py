@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from bottleiq.models import Product, SmartOrder, SmartOrderLine, Store, Vendor
+from bottleiq.models import Product, SmartOrder, SmartOrderAudit, SmartOrderLine, Store, Vendor
 from bottleiq.schemas import OrderEdit, OrderInput
 from bottleiq.services.analytics import analyze, persist_recommendations
 
@@ -92,7 +92,7 @@ def order_detail(db: Session, order: SmartOrder) -> dict:
     }
 
 
-def edit_order(db: Session, order: SmartOrder, data: OrderEdit) -> None:
+def edit_order(db: Session, order: SmartOrder, data: OrderEdit, user_id: str) -> None:
     if order.version != data.version:
         raise HTTPException(409, "This order changed. Refresh before saving again.")
     edits = {line.product_id: line.cases for line in data.lines}
@@ -107,13 +107,33 @@ def edit_order(db: Session, order: SmartOrder, data: OrderEdit) -> None:
     if set(edits) - {line.product_id for line in lines}:
         raise HTTPException(422, "An item does not belong to this order")
     total = Decimal(0)
+    changes = []
     for line in lines:
         if line.product_id in edits:
+            before = line.recommended_cases
             line.recommended_cases = edits[line.product_id]
             line.recommended_units = line.recommended_cases * line.units_per_case
             line.line_total = line.recommended_units * line.unit_cost
+            if before != line.recommended_cases:
+                changes.append(
+                    {
+                        "product_id": line.product_id,
+                        "before_cases": before,
+                        "after_cases": line.recommended_cases,
+                    }
+                )
         total += line.line_total
     order.estimated_total_cost = total
+    db.add(
+        SmartOrderAudit(
+            organization_id=order.organization_id,
+            smart_order_id=order.id,
+            user_id=user_id,
+            version_before=order.version,
+            version_after=order.version + 1,
+            changes=changes,
+        )
+    )
     order.version += 1
     db.commit()
 

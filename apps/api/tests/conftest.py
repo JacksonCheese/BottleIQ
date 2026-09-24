@@ -4,6 +4,7 @@ from datetime import date
 
 os.environ.setdefault("DATABASE_URL", "sqlite://")
 os.environ["DEMO_ENABLED"] = "true"
+os.environ["ENVIRONMENT"] = "test"
 
 import pytest
 from fastapi.testclient import TestClient

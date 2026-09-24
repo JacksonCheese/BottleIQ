@@ -1235,6 +1235,11 @@ tbody tr:hover {
 .import-result svg {
   flex-shrink: 0;
 }
+.import-result.has-errors {
+  background: #faf6eb;
+  border-color: #eadfc8;
+  color: #836b43;
+}
 .import-result p {
   font-size: 10px;
   margin-top: 8px;

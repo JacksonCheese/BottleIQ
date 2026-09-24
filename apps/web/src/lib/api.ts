@@ -1,14 +1,21 @@
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/api${path}`, {
-    ...init,
-    credentials: "same-origin",
-    headers: {
-      ...(init?.body instanceof FormData
-        ? {}
-        : { "Content-Type": "application/json" }),
-      ...init?.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      ...init,
+      credentials: "same-origin",
+      headers: {
+        ...(init?.body instanceof FormData
+          ? {}
+          : { "Content-Type": "application/json" }),
+        ...init?.headers,
+      },
+    });
+  } catch {
+    throw new Error(
+      "Cannot reach BottleIQ. Check your connection and try again.",
+    );
+  }
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     const message =
@@ -22,7 +29,12 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
               )
               .join("; ")
           : "We couldn't complete that request. Please try again.";
-    throw new Error(message);
+    const requestId = data.request_id || response.headers?.get("X-Request-ID");
+    throw new Error(
+      response.status >= 500 && requestId
+        ? `${message} If this keeps happening, report code ${requestId}.`
+        : message,
+    );
   }
   return response.json();
 }

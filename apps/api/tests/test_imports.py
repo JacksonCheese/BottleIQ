@@ -70,6 +70,33 @@ def test_malformed_csv_rejected(content):
         GenericCSVImporter().parse(content, "inventory", {})
 
 
+def test_ambiguous_column_mapping_is_rejected():
+    content = b"code,title,stock,cost,price\n001,Test,8,18,29\n"
+    mapping = {
+        "sku": "code",
+        "product_name": "title",
+        "quantity_on_hand": "stock",
+        "unit_cost": "cost",
+        "retail_price": "cost",
+    }
+    with pytest.raises(ValueError, match="only one BottleIQ field"):
+        GenericCSVImporter().parse(content, "inventory", mapping)
+
+
+def test_missing_mapped_column_has_actionable_error():
+    with pytest.raises(ValueError, match="Mapped CSV columns not found: missing"):
+        GenericCSVImporter().parse(INVENTORY, "inventory", {"sku": "missing"})
+
+
+def test_blank_csv_header_is_rejected():
+    with pytest.raises(ValueError, match="name for every column"):
+        GenericCSVImporter().parse(
+            b"sku,product_name,quantity_on_hand,unit_cost,retail_price, \n001,Test,8,18,29,x\n",
+            "inventory",
+            {},
+        )
+
+
 @pytest.mark.parametrize("value", ["NaN", "Infinity", "-1", "10000001", "hello", "1.001"])
 def test_unsafe_numbers_rejected(value):
     with pytest.raises(ValueError):

@@ -87,11 +87,26 @@ class GenericCSVImporter(BaseImporter):
             raise ValueError("Binary files are not CSV files")
         try:
             reader = csv.DictReader(io.StringIO(content.decode("utf-8-sig")), strict=True)
-            headers = reader.fieldnames
-            if not headers or len(set(headers)) != len(headers):
-                raise ValueError("CSV must have unique column headers")
+            headers = [header.strip() for header in reader.fieldnames or []]
+            if not headers or any(not header for header in headers):
+                raise ValueError("CSV must have a name for every column")
+            if len(set(headers)) != len(headers):
+                raise ValueError("CSV column names must be unique")
+            reader.fieldnames = headers
             if len(headers) > 80:
                 raise ValueError("CSV has too many columns (maximum 80)")
+            allowed = set(FIELDS[kind] + OPTIONAL)
+            unknown = sorted(set(mapping) - allowed)
+            if unknown:
+                raise ValueError("Unknown BottleIQ fields in column mapping: " + ", ".join(unknown))
+            unavailable = sorted(
+                {source for source in mapping.values() if source and source not in headers}
+            )
+            if unavailable:
+                raise ValueError("Mapped CSV columns not found: " + ", ".join(unavailable))
+            sources = [source for source in mapping.values() if source]
+            if len(set(sources)) != len(sources):
+                raise ValueError("Map each CSV column to only one BottleIQ field")
             missing = [key for key in FIELDS[kind] if mapping.get(key, key) not in headers]
             if missing:
                 raise ValueError("Map these required columns: " + ", ".join(missing))

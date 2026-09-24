@@ -305,3 +305,19 @@ class SmartOrderLine(Identity, Tenant, Base):
         ),
         CheckConstraint("recommended_units >= 0 AND recommended_cases >= 0"),
     )
+
+
+class SmartOrderAudit(Identity, Tenant, Base):
+    __tablename__ = "smart_order_audit"
+    smart_order_id: Mapped[str] = mapped_column(String(36))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    version_before: Mapped[int] = mapped_column(Integer)
+    version_after: Mapped[int] = mapped_column(Integer)
+    changes: Mapped[list[dict]] = mapped_column(JSON)
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["smart_order_id", "organization_id"],
+            ["smart_orders.id", "smart_orders.organization_id"],
+        ),
+        Index("ix_smart_order_audit_order_created", "smart_order_id", "created_at"),
+    )

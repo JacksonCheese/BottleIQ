@@ -55,6 +55,7 @@ After cloning your repository, run from its root:
 make setup                    # copies .env.example only if .env is absent; installs locked dependencies
 make db                       # starts local PostgreSQL and waits for readiness
 make seed                     # migrates and seeds the synthetic store
+make check-migrations         # confirms the database is ready for this code
 make dev                      # API + web; Ctrl-C stops both
 ```
 
@@ -70,7 +71,7 @@ make api
 make web
 ```
 
-For actual onboarding: create an account → create a store → import inventory → import at least 90 days of sales → import purchases → verify vendor case packs/lead times → record confirmed incoming stock → review alerts → create an order draft. Inventory can also enrich SKUs imported through sales first.
+For actual onboarding: create an account → create a store → import inventory → import at least 90 days of sales → import purchases → verify vendor case packs/lead times → record confirmed incoming stock → review alerts → create an order draft. Inventory can also enrich SKUs imported through sales first. See the [supervised pilot runbook](docs/pilot-runbook.md) for setup, review, and issue reporting.
 
 ## Demo Data
 

@@ -1,7 +1,12 @@
 "use client";
 import { useState } from "react";
 import Papa from "papaparse";
-import { Upload, FileSpreadsheet, CheckCircle2 } from "lucide-react";
+import {
+  Upload,
+  FileSpreadsheet,
+  CheckCircle2,
+  TriangleAlert,
+} from "lucide-react";
 import { useWorkspace } from "@/components/workspace";
 import { PageTitle, Panel, ErrorState, Status } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -69,7 +74,13 @@ export default function Page() {
       setError("This file could not be read as CSV. Check its format.");
       return;
     }
-    const h = parsed.data[0].map((v) => v.replace(/^\uFEFF/, ""));
+    const h = parsed.data[0].map((v) => v.replace(/^\uFEFF/, "").trim());
+    if (h.some((value) => !value) || new Set(h).size !== h.length) {
+      setError(
+        "Every CSV column needs a unique name. Fix the header row and try again.",
+      );
+      return;
+    }
     setHeaders(h);
     setPreview(parsed.data.slice(1));
     setMapping(
@@ -207,16 +218,26 @@ export default function Page() {
             )}
             {error && <ErrorState message={error} />}{" "}
             {result && (
-              <div className="import-result" role="status">
-                <CheckCircle2 size={20} />
+              <div
+                className={`import-result ${result.rows_rejected ? "has-errors" : ""}`}
+                role="status"
+              >
+                {result.rows_rejected ? (
+                  <TriangleAlert size={20} />
+                ) : (
+                  <CheckCircle2 size={20} />
+                )}
                 <div>
                   <strong>
                     {result.rows_imported} imported · {result.rows_duplicate}{" "}
                     duplicates · {result.rows_rejected} rejected
                   </strong>
                   <p>
-                    Job status: {result.status}. Re-uploading the same file
-                    returns this saved result.
+                    {result.rows_rejected
+                      ? result.rows_imported
+                        ? "Some rows were saved. Fix the rejected rows in your CSV, then upload the corrected file."
+                        : "No rows were saved. Fix the issues below in your CSV, then upload it again."
+                      : "Your data is ready. Re-uploading the same file returns this saved result."}
                   </p>
                   {result.error_summary.length > 0 && (
                     <>

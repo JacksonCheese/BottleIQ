@@ -2,6 +2,8 @@ import json
 import logging
 import time
 from collections import defaultdict, deque
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -12,11 +14,21 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from bottleiq.config import settings
 from bottleiq.db import SessionLocal
+from bottleiq.migrations import check_migrations
 from bottleiq.routes import auth, catalog, imports, incoming, orders
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("bottleiq")
-app = FastAPI(title="BottleIQ API", version="0.1.0")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    if settings().environment != "test":
+        check_migrations()
+    yield
+
+
+app = FastAPI(title="BottleIQ API", version="0.1.0", lifespan=lifespan)
 
 
 class BodyLimit:

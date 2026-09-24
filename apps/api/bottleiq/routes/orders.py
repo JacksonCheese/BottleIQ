@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from bottleiq.auth import Actor, current_actor, editor, get_store
 from bottleiq.db import get_db
-from bottleiq.models import SmartOrder
+from bottleiq.models import SmartOrder, SmartOrderAudit, User
 from bottleiq.schemas import OrderEdit, OrderInput, OrderView
 from bottleiq.services.orders import create_order, edit_order, export_order, order_detail
 
@@ -57,8 +57,34 @@ def update(
     order_id: str, data: OrderEdit, actor: Actor = Depends(editor), db: Session = Depends(get_db)
 ) -> dict:
     order = find_order(db, actor, order_id, lock=True)
-    edit_order(db, order, data)
+    edit_order(db, order, data, actor.user.id)
     return order_detail(db, order)
+
+
+@router.get("/{order_id}/history")
+def history(
+    order_id: str, actor: Actor = Depends(current_actor), db: Session = Depends(get_db)
+) -> list[dict]:
+    order = find_order(db, actor, order_id)
+    events = db.execute(
+        select(SmartOrderAudit, User.name)
+        .join(User, User.id == SmartOrderAudit.user_id)
+        .where(
+            SmartOrderAudit.smart_order_id == order.id,
+            SmartOrderAudit.organization_id == actor.organization_id,
+        )
+        .order_by(SmartOrderAudit.created_at, SmartOrderAudit.id)
+    ).all()
+    return [
+        {
+            "created_at": event.created_at,
+            "edited_by": name,
+            "version_before": event.version_before,
+            "version_after": event.version_after,
+            "changes": event.changes,
+        }
+        for event, name in events
+    ]
 
 
 @router.get("/{order_id}/export")
