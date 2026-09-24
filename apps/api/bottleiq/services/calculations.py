@@ -19,6 +19,27 @@ class Demand:
     units: int
 
 
+def stockout_before_replenishment(
+    on_hand: int,
+    average_daily_demand: float,
+    safety_stock: float,
+    lead_days: int,
+    incoming_by_day: dict[int, int],
+) -> bool:
+    """Keep a risk visible if stock runs out before a confirmed delivery arrives."""
+    if average_daily_demand <= 0:
+        return False
+    projected = float(on_hand) + incoming_by_day.get(0, 0)
+    if projected <= 0:
+        return True
+    for day in range(1, lead_days + 1):
+        projected += incoming_by_day.get(day, 0)
+        projected -= average_daily_demand
+        if projected <= 0:
+            return True
+    return projected <= safety_stock
+
+
 def demand_metrics(
     daily: list[int],
     on_hand: int,
@@ -26,8 +47,9 @@ def demand_metrics(
     pack: int,
     target_days: int = 21,
     service_level: float = 0.95,
+    incoming_units: int = 0,
 ) -> Demand:
-    if not daily or pack <= 0 or lead_days < 0 or on_hand < 0:
+    if not daily or pack <= 0 or lead_days < 0 or on_hand < 0 or incoming_units < 0:
         raise ValueError(
             "Demand needs calendar days, nonnegative stock/lead time, and a positive case pack"
         )
@@ -39,7 +61,7 @@ def demand_metrics(
     point = average * lead_days + safety
     target = average * (lead_days + target_days) + safety
     # Weekly review: fill to target, even above reorder point; risk is a separate signal.
-    cases = ceil(max(0, target - on_hand) / pack) if average > 0 else 0
+    cases = ceil(max(0, target - on_hand - incoming_units) / pack) if average > 0 else 0
     return Demand(
         average,
         std,

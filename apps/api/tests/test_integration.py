@@ -1,10 +1,10 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
 from sqlalchemy import select
 
-from bottleiq.models import InventorySnapshot
+from bottleiq.models import IncomingStock, InventorySnapshot
 from bottleiq.schemas import AnalysisOptions, OrderEdit, OrderInput, OrderLineEdit
 from bottleiq.seed import seed_demo
 from bottleiq.services.analytics import alerts_for, analyze
@@ -116,6 +116,67 @@ def test_stale_order_version_rejected(db, today):
     with pytest.raises(HTTPException) as error:
         edit_order(db, order, OrderEdit(version=1, lines=[]))
     assert error.value.status_code == 409
+
+
+def test_confirmed_incoming_reduces_live_order_and_can_be_resolved(db, client):
+    as_of = date.today()
+    store = seed_demo(db, as_of, product_count=1)
+    before = analyze(db, store)[0]
+    assert before.recommended_cases == 8
+    # A different organization cannot add inbound stock to the demo product.
+    foreign = client.post(
+        "/incoming-stock",
+        json={
+            "store_id": store.id,
+            "product_id": before.product_id,
+            "quantity_units": 72,
+            "expected_at": (as_of + timedelta(days=1)).isoformat(),
+        },
+    )
+    assert foreign.status_code == 404
+    assert client.post("/auth/demo").status_code == 200
+    created = client.post(
+        "/incoming-stock",
+        json={
+            "store_id": store.id,
+            "product_id": before.product_id,
+            "quantity_units": 72,
+            "expected_at": (as_of + timedelta(days=1)).isoformat(),
+            "reference": "PO-123",
+        },
+    )
+    assert created.status_code == 201
+    assert created.json()["quantity_units"] == 72
+    after = analyze(db, store)[0]
+    assert after.incoming_units == 72
+    assert after.inventory_position == 80
+    assert after.recommended_cases == 2
+    assert not after.stockout  # Tomorrow's confirmed delivery arrives before stock runs out.
+    assert "72 confirmed incoming units" in after.explanation
+    order = create_order(db, store, OrderInput(store_id=store.id, vendor_id=before.vendor_id))
+    assert order_detail(db, order)["lines"][0]["cases"] == 2
+    resolved = client.patch(f"/incoming-stock/{created.json()['id']}", json={"status": "resolved"})
+    assert resolved.status_code == 200
+    assert analyze(db, store)[0].recommended_cases == 8
+
+
+def test_overdue_incoming_holds_order_until_review(db):
+    as_of = date.today()
+    store = seed_demo(db, as_of, product_count=1)
+    metric = analyze(db, store)[0]
+    db.add(
+        IncomingStock(
+            organization_id=store.organization_id,
+            store_id=store.id,
+            product_id=metric.product_id,
+            quantity_units=72,
+            expected_at=as_of - timedelta(days=1),
+        )
+    )
+    db.commit()
+    held = analyze(db, store)[0]
+    assert held.recommended_cases == 0
+    assert "overdue incoming stock needs review" in held.blockers
 
 
 def test_seed_can_resume_without_duplicate_facts(db, today):

@@ -5,9 +5,21 @@ import polars as pl
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from bottleiq.models import InventorySnapshot, Product, ReorderRecommendation, Sale, Store, Vendor
+from bottleiq.models import (
+    IncomingStock,
+    InventorySnapshot,
+    Product,
+    ReorderRecommendation,
+    Sale,
+    Store,
+    Vendor,
+)
 from bottleiq.schemas import Alert, AnalysisOptions, Metrics
-from bottleiq.services.calculations import abc_classes, demand_metrics
+from bottleiq.services.calculations import (
+    abc_classes,
+    demand_metrics,
+    stockout_before_replenishment,
+)
 
 
 def analyze(
@@ -34,6 +46,15 @@ def analyze(
         .order_by(InventorySnapshot.snapshot_at)
     ).all()
     latest = {s.product_id: s for s in snapshots}
+    incoming_by_product: dict[str, list[IncomingStock]] = {}
+    for shipment in db.scalars(
+        select(IncomingStock).where(
+            IncomingStock.store_id == store.id,
+            IncomingStock.organization_id == org,
+            IncomingStock.status == "open",
+        )
+    ):
+        incoming_by_product.setdefault(shipment.product_id, []).append(shipment)
     first_sale = db.scalar(
         select(func.min(Sale.sold_at)).where(Sale.store_id == store.id, Sale.organization_id == org)
     )
@@ -78,6 +99,14 @@ def analyze(
         vendor = vendors.get(p.default_vendor_id or "")
         lead = vendor.default_lead_time_days if vendor else 4
         hand = snap.quantity_on_hand if snap else 0
+        shipments = incoming_by_product.get(p.id, [])
+        overdue_incoming = any(shipment.expected_at < today for shipment in shipments)
+        horizon_end = today + timedelta(days=lead + options.target_days)
+        incoming_units = sum(
+            shipment.quantity_units
+            for shipment in shipments
+            if today <= shipment.expected_at <= horizon_end
+        )
         cost = float(snap.unit_cost) if snap and snap.unit_cost is not None else None
         price = float(snap.retail_price) if snap else 0.0
         demand = demand_metrics(
@@ -87,6 +116,7 @@ def analyze(
             p.units_per_case,
             options.target_days,
             options.service_level,
+            incoming_units,
         )
         qty90 = sum(units[-90:])
         revenue = sum(x[1] for x in daily[-90:])
@@ -97,7 +127,16 @@ def analyze(
             and (today - first_sale).days >= options.dead_days
         )
         slow = hand > 0 and (demand.days is None or demand.days > options.slow_days)
-        risk = demand.average > 0 and hand <= demand.reorder_point
+        incoming_by_day: dict[int, int] = {}
+        for shipment in shipments:
+            days_until_arrival = (shipment.expected_at - today).days
+            if 0 <= days_until_arrival <= lead:
+                incoming_by_day[days_until_arrival] = (
+                    incoming_by_day.get(days_until_arrival, 0) + shipment.quantity_units
+                )
+        risk = stockout_before_replenishment(
+            hand, demand.average, demand.safety, lead, incoming_by_day
+        )
         recent, baseline = sum(units[-7:]) / 7, sum(units[-35:-7]) / 28
         abnormal = baseline > 0 and recent >= 2 * baseline and recent - baseline >= 1
         blockers = []
@@ -113,6 +152,8 @@ def analyze(
             blockers.append("less than 14 days of sales history")
         if last_sale is None or (today - last_sale).days > 7:
             blockers.append("sales export older than 7 days")
+        if overdue_incoming:
+            blockers.append("overdue incoming stock needs review")
         cases = 0 if blockers else demand.cases
         status = (
             "needs_data"
@@ -134,7 +175,14 @@ def analyze(
         elif demand.average == 0:
             explanation = "No demand in the selected period. Do not reorder; verify sales coverage."
         elif cases:
-            explanation = f"Stock covers {demand.days:.1f} days. With a {lead}-day lead time and {options.target_days}-day replenishment target, order {cases} cases ({cases * p.units_per_case} units), including {demand.safety:.1f} units of safety stock."
+            inbound_note = (
+                f" {incoming_units} confirmed incoming units are already counted."
+                if incoming_units
+                else ""
+            )
+            explanation = f"Stock covers {demand.days:.1f} days. With a {lead}-day lead time and {options.target_days}-day replenishment target, order {cases} cases ({cases * p.units_per_case} units), including {demand.safety:.1f} units of safety stock.{inbound_note}"
+        elif incoming_units:
+            explanation = f"{incoming_units} confirmed incoming units due within the planning window cover the replenishment need. Check delivery timing before purchasing."
         else:
             explanation = f"Stock covers {demand.days:.1f} days, above the replenishment target. Do not reorder this week."
         inventory_value = hand * cost if cost is not None else None
@@ -161,6 +209,8 @@ def analyze(
                 units_per_case=p.units_per_case,
                 snapshot_at=snap.snapshot_at if snap else None,
                 current_quantity=hand,
+                incoming_units=incoming_units,
+                inventory_position=hand + incoming_units,
                 unit_cost=cost,
                 retail_price=price,
                 inventory_value=inventory_value,

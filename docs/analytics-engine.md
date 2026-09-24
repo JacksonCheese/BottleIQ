@@ -18,7 +18,8 @@ For daily unit quantities `q[d]` in the selected window:
 | Safety stock | `NormalInverseCDF(service_level) × std(q) × sqrt(lead_days)` |
 | Reorder point | `ADD × lead_days + safety_stock` |
 | Target stock | `ADD × (lead_days + target_days) + safety_stock` |
-| Recommended cases | `ceil(max(0, target_stock − on_hand) / units_per_case)` |
+| Inventory position | `on_hand + confirmed incoming units due within lead_days + target_days` |
+| Recommended cases | `ceil(max(0, target_stock − inventory_position) / units_per_case)` |
 | Recommended units | `cases × units_per_case` |
 | Days of supply | `on_hand / ADD`; null when ADD is zero |
 
@@ -26,7 +27,9 @@ Defaults: 95% service level (`Z ≈ 1.644854`), vendor-specific lead time (4 day
 
 This is a **weekly periodic-review fill-to-target policy**. A product above its reorder point may still warrant an order. Reorder point is the stockout warning threshold, not an ordering gate. Zero-demand and over-target items receive zero. Rounding may carry more inventory than the target; no case-breaking or budget optimization is modeled. With zero variability the formula produces zero safety stock; this is a model assumption, not certainty.
 
-Orders are held if cost is missing/zero, vendor is missing, inventory is missing or over seven days old, total observed history is under 14 days, or the latest store sales record is over seven days old. Each metric contains blockers and a human-readable explanation. A held recommendation has zero units, and unknown costs remain null.
+Owners record only confirmed incoming deliveries, with quantities in units and an expected date. An open delivery due inside the planning window reduces the new order. An overdue open delivery is excluded and holds the recommendation until it is reviewed. After receipt appears in a new inventory snapshot, the owner marks the incoming record handled. Existing order drafts do not recalculate; create a new draft after changing incoming stock. Days of supply remains based on on-hand inventory. Stockout risk projects average demand through lead time and counts confirmed arrivals on their expected dates; an arrival after stock runs out does not hide the risk.
+
+Orders are held if cost is missing/zero, vendor is missing, inventory is missing or over seven days old, total observed history is under 14 days, the latest store sales record is over seven days old, or an incoming delivery is overdue. Each metric contains blockers and a human-readable explanation. A held recommendation has zero units, and unknown costs remain null.
 
 ## Profitability and inventory health
 

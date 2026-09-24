@@ -3,7 +3,11 @@ from statistics import NormalDist
 
 import pytest
 
-from bottleiq.services.calculations import abc_classes, demand_metrics
+from bottleiq.services.calculations import (
+    abc_classes,
+    demand_metrics,
+    stockout_before_replenishment,
+)
 
 
 def test_average_includes_zero_days():
@@ -26,6 +30,20 @@ def test_fast_sku_case_rounding():
     assert m.cases == math.ceil((100 - 8) / 12) == 8
     assert m.units == 96
     assert m.reorder_point == 16
+
+
+def test_confirmed_incoming_reduces_order_without_changing_days_of_supply():
+    m = demand_metrics([4] * 60, 8, 4, 12, incoming_units=72)
+    assert m.cases == 2
+    assert m.units == 24
+    assert m.days == 2
+    assert m.reorder_point == 16
+
+
+def test_stockout_risk_checks_arrival_timing():
+    assert not stockout_before_replenishment(8, 4, 0, 4, {1: 72})
+    assert stockout_before_replenishment(8, 4, 0, 4, {3: 72})
+    assert stockout_before_replenishment(8, 4, 0, 4, {})
 
 
 def test_normal_stock_no_order():
@@ -58,9 +76,16 @@ def test_abc_threshold_crossing_item_stays_in_previous_class():
 
 
 @pytest.mark.parametrize(
-    "daily,hand,lead,pack",
-    [([], 1, 2, 12), ([1], -1, 2, 12), ([1], 1, -1, 12), ([1], 1, 2, 0), ([-1], 1, 2, 12)],
+    "daily,hand,lead,pack,incoming",
+    [
+        ([], 1, 2, 12, 0),
+        ([1], -1, 2, 12, 0),
+        ([1], 1, -1, 12, 0),
+        ([1], 1, 2, 0, 0),
+        ([-1], 1, 2, 12, 0),
+        ([1], 1, 2, 12, -1),
+    ],
 )
-def test_invalid_inputs(daily, hand, lead, pack):
+def test_invalid_inputs(daily, hand, lead, pack, incoming):
     with pytest.raises(ValueError):
-        demand_metrics(daily, hand, lead, pack)
+        demand_metrics(daily, hand, lead, pack, incoming_units=incoming)

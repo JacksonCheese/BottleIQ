@@ -98,6 +98,18 @@ def test_viewer_cannot_mutate(client, db, store):
     db.commit()
     assert client.post("/stores", json={"name": "No"}).status_code == 403
     assert client.post("/recommendations/generate", json={"store_id": store.id}).status_code == 403
+    assert (
+        client.post(
+            "/incoming-stock",
+            json={
+                "store_id": store.id,
+                "product_id": "nonexistent",
+                "quantity_units": 12,
+                "expected_at": "2026-09-24",
+            },
+        ).status_code
+        == 403
+    )
     assert client.get("/stores").status_code == 200
 
 

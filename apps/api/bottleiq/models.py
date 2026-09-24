@@ -173,6 +173,27 @@ class Purchase(Fact, Base):
     )
 
 
+class IncomingStock(Identity, Tenant, Base):
+    __tablename__ = "incoming_stock"
+    store_id: Mapped[str] = mapped_column(String(36))
+    product_id: Mapped[str] = mapped_column(String(36))
+    quantity_units: Mapped[int] = mapped_column(Integer)
+    expected_at: Mapped[date] = mapped_column(Date)
+    reference: Mapped[str | None] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(12), default="open")
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["store_id", "organization_id"], ["stores.id", "stores.organization_id"]
+        ),
+        ForeignKeyConstraint(
+            ["product_id", "organization_id"], ["products.id", "products.organization_id"]
+        ),
+        CheckConstraint("quantity_units > 0"),
+        CheckConstraint("status IN ('open', 'resolved')"),
+        Index("ix_incoming_stock_store_product", "store_id", "product_id"),
+    )
+
+
 class ImportJob(Identity, Tenant, Base):
     __tablename__ = "import_jobs"
     store_id: Mapped[str] = mapped_column(String(36))

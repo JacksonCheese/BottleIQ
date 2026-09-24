@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -70,6 +71,28 @@ class ProductEdit(BaseModel):
     brand: str = Field(max_length=120)
 
 
+class IncomingInput(BaseModel):
+    store_id: str
+    product_id: str
+    quantity_units: int = Field(ge=1, le=1_000_000)
+    expected_at: date
+    reference: str | None = Field(default=None, max_length=100)
+
+
+class IncomingUpdate(BaseModel):
+    status: Literal["resolved"]
+
+
+class IncomingView(BaseModel):
+    id: str
+    store_id: str
+    product_id: str
+    quantity_units: int
+    expected_at: date
+    reference: str | None
+    status: Literal["open", "resolved"]
+
+
 class VendorInput(BaseModel):
     name: str = Field(min_length=1, max_length=160)
     default_lead_time_days: int = Field(default=4, ge=0, le=90)
@@ -89,6 +112,8 @@ class Metrics(BaseModel):
     units_per_case: int
     snapshot_at: date | None
     current_quantity: int
+    incoming_units: int
+    inventory_position: int
     unit_cost: float | None
     retail_price: float
     inventory_value: float | None

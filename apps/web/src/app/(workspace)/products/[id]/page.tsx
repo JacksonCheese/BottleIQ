@@ -7,7 +7,7 @@ import { PageTitle, Panel, Loading, ErrorState, Status } from "@/components/ui";
 import { SalesChart } from "@/components/charts";
 import { useResource } from "@/lib/use-resource";
 import { api, decimal, money } from "@/lib/api";
-import type { Metric, Vendor } from "@/lib/types";
+import type { Incoming, Metric, Vendor } from "@/lib/types";
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { store, user } = useWorkspace();
@@ -17,8 +17,13 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     reload,
   } = useResource<Metric>(`/products/${id}?store_id=${store.id}`);
   const vendors = useResource<Vendor[]>("/vendors");
+  const incoming = useResource<Incoming[]>(
+    `/incoming-stock?store_id=${store.id}&product_id=${id}`,
+  );
   const [saveError, setSaveError] = useState("");
+  const [incomingError, setIncomingError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [incomingBusy, setIncomingBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   if (error) return <ErrorState message={error} retry={reload} />;
   if (!m) return <Loading />;
@@ -53,6 +58,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       <div className="product-metrics">
         {[
           ["On hand", `${m.current_quantity} units`],
+          ["Confirmed incoming", `${m.incoming_units} units`],
+          ["Inventory position", `${m.inventory_position} units`],
           ["Inventory value", money(m.inventory_value)],
           [
             "Days of supply",
@@ -73,6 +80,112 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
           </div>
         ))}
       </div>
+      <Panel
+        title="Stock already on the way"
+        subtitle="Count confirmed deliveries before building a new order"
+      >
+        <div className="padded">
+          <p className="muted-copy">
+            Deliveries due within the planning window reduce the suggested
+            order. Overdue deliveries pause it until you review them. A new
+            draft is needed after any change here.
+          </p>
+          {incoming.error && (
+            <ErrorState message={incoming.error} retry={incoming.reload} />
+          )}
+          {incomingError && <ErrorState message={incomingError} />}
+          <div className="incoming-list">
+            {incoming.data?.map((item) => (
+              <div className="incoming-item" key={item.id}>
+                <div>
+                  <strong>{item.quantity_units} units</strong>
+                  <p>
+                    Expected {item.expected_at}
+                    {item.reference ? ` · ${item.reference}` : ""}
+                  </p>
+                </div>
+                <button
+                  className="button secondary"
+                  type="button"
+                  disabled={incomingBusy || user.role === "viewer"}
+                  onClick={async () => {
+                    setIncomingBusy(true);
+                    setIncomingError("");
+                    try {
+                      await api(`/incoming-stock/${item.id}`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ status: "resolved" }),
+                      });
+                      incoming.reload();
+                      reload();
+                    } catch (e) {
+                      setIncomingError((e as Error).message);
+                    } finally {
+                      setIncomingBusy(false);
+                    }
+                  }}
+                >
+                  Mark handled
+                </button>
+              </div>
+            ))}
+            {incoming.data?.length === 0 && (
+              <p className="muted-copy">No confirmed deliveries recorded.</p>
+            )}
+          </div>
+          <p className="muted-copy">
+            Mark handled after a new inventory snapshot includes the delivery,
+            or if it was cancelled.
+          </p>
+          {user.role !== "viewer" && (
+            <form
+              className="incoming-form"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setIncomingBusy(true);
+                setIncomingError("");
+                const form = e.currentTarget;
+                const data = new FormData(form);
+                try {
+                  await api("/incoming-stock", {
+                    method: "POST",
+                    body: JSON.stringify({
+                      store_id: store.id,
+                      product_id: id,
+                      quantity_units: Number(data.get("quantity_units")),
+                      expected_at: data.get("expected_at"),
+                      reference: data.get("reference") || null,
+                    }),
+                  });
+                  form.reset();
+                  incoming.reload();
+                  reload();
+                } catch (e) {
+                  setIncomingError((e as Error).message);
+                } finally {
+                  setIncomingBusy(false);
+                }
+              }}
+            >
+              <label>
+                Confirmed incoming units
+                <input name="quantity_units" type="number" min={1} required />
+              </label>
+              <label>
+                Expected date
+                <input name="expected_at" type="date" required />
+              </label>
+              <label>
+                Order reference (optional)
+                <input name="reference" maxLength={100} />
+              </label>
+              <button className="button secondary" disabled={incomingBusy}>
+                {incomingBusy ? "Saving…" : "Add incoming stock"}
+              </button>
+            </form>
+          )}
+        </div>
+      </Panel>
       <Panel
         title="How this product moves"
         subtitle="Daily sales · last 90 complete calendar days"

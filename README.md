@@ -13,6 +13,7 @@ BottleIQ is an inventory intelligence MVP for independent liquor stores and smal
 - Searchable, filterable, sortable inventory, ABC classification, product detail and 90-day sales charts.
 - Explainable demand, safety stock, reorder points, days supply, margin, turnover, GMROI, and stock alerts.
 - Distributor Smart Orders with configurable demand window, target supply, service level, case rounding, editable/excluded lines, minimum-order warnings, and CSV export.
+- Confirmed incoming-stock tracking by product and store, with expected dates, order references, and overdue-delivery holds.
 - Product/distributor configuration, including case packs and lead times.
 - Seeded synthetic demo, migrations, PostgreSQL development service, unit/integration/browser tests, and CI.
 
@@ -69,7 +70,7 @@ make api
 make web
 ```
 
-For actual onboarding: create an account → create a store → import inventory → import at least 90 days of sales → import purchases → verify vendor case packs/lead times → review alerts → create an order draft. Inventory can also enrich SKUs imported through sales first.
+For actual onboarding: create an account → create a store → import inventory → import at least 90 days of sales → import purchases → verify vendor case packs/lead times → record confirmed incoming stock → review alerts → create an order draft. Inventory can also enrich SKUs imported through sales first.
 
 ## Demo Data
 
@@ -98,13 +99,13 @@ Daily sales exports need one row per date/SKU; transaction exports need stable `
 - **Safety stock:** `Z × population daily demand σ × sqrt(lead days)`, default 95% service level.
 - **Reorder point:** lead-time demand + safety stock.
 - **Target stock:** daily demand × (lead days + target days) + safety stock; default target 21 days after lead time.
-- **Order:** positive target deficit rounded up to full cases. Weekly fill-to-target policy; the reorder point is a separate risk signal.
+- **Order:** positive target deficit minus confirmed incoming units due within the planning window, rounded up to full cases. Weekly fill-to-target policy; the reorder point remains an on-hand risk signal.
 - **Dead stock:** positive on hand, no sales for 90 days, sufficient store history.
 - **Slow stock:** >90 days supply or no demand. Dashboard slow value excludes dead stock to avoid double counting.
 - **GMROI:** 90-day estimated gross profit / estimated average inventory cost; explicitly an estimate using available snapshots and latest unit cost.
 - **ABC:** descending 90-day revenue with cumulative 80% / 95% thresholds. Boundary-crossing product stays in the earlier class.
 
-Missing cost/vendor, stale inventory/sales (>7 days), or insufficient sales history (<14 days) hold recommendations. Invoice history is stored but does not currently replace the snapshot cost basis. Open orders and promotional forecasting are not modeled. [All definitions and assumptions](docs/analytics-engine.md).
+Missing cost/vendor, stale inventory/sales (>7 days), insufficient sales history (<14 days), or an overdue incoming delivery hold recommendations. Invoice history is stored but does not currently replace the snapshot cost basis. Incoming stock must be entered manually; drafts do not create incoming records, and promotions are not forecast. [All definitions and assumptions](docs/analytics-engine.md).
 
 ## Testing
 

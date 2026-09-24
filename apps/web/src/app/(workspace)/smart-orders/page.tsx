@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import {
   ArrowRight,
   Download,
@@ -162,8 +163,8 @@ export default function Page() {
           </select>
         </label>
         <p>
-          Case-rounded quantities. Missing or stale data holds an item out of
-          the order.
+          Case-rounded quantities. Confirmed incoming stock is deducted. Check
+          open purchase orders and promotions before exporting.
         </p>
       </div>
       {error && <ErrorState message={error} />}{" "}
@@ -212,6 +213,8 @@ export default function Page() {
         >
           <div className="notice">
             Set a line to 0 cases to exclude it. Save edits before exporting.
+            Existing drafts keep their original quantities; create a new draft
+            after recording incoming stock.
             {saved && <strong> Changes saved.</strong>}
           </div>
           <div className="table-scroll">
@@ -231,6 +234,9 @@ export default function Page() {
                     <td>
                       <strong>{l.product_name}</strong>
                       <p className="line-explanation">{l.explanation}</p>
+                      <Link href={`/products/${l.product_id}`}>
+                        Review incoming stock
+                      </Link>
                     </td>
                     <td>{l.units_per_case} units</td>
                     <td>{money(l.unit_cost, true)}</td>
@@ -308,8 +314,9 @@ export default function Page() {
             </div>
           </div>
           <p className="padded muted-copy">
-            Taxes, freight, discounts, open purchase orders, and case
-            availability are not included. Exporting does not submit an order.
+            Taxes, freight, discounts, unrecorded purchase orders, promotions,
+            and case availability are not included. Exporting does not submit an
+            order.
           </p>
         </Panel>
       )}
