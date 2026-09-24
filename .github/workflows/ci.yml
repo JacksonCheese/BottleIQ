@@ -74,7 +74,7 @@ jobs:
       - run: make setup seed check-migrations
       - run: cd apps/web && npx playwright install --with-deps chromium && npm run build
       - run: |
-          cd apps/api && uv run uvicorn bottleiq.main:app --host 127.0.0.1 --port 8000 > /tmp/api.log 2>&1 &
+          cd apps/api && .venv/bin/uvicorn bottleiq.main:app --host 127.0.0.1 --port 8000 > /tmp/api.log 2>&1 &
           cd apps/web && npm start > /tmp/web.log 2>&1 &
           ready=false
           for attempt in $(seq 1 60); do
