@@ -1,11 +1,15 @@
 SHELL := /bin/bash
-.PHONY: setup db migrate check-migrations dev api web seed samples test test-api test-web lint typecheck format build smoke verify reset-db
-setup:
+.PHONY: setup check-node db migrate check-migrations dev api web seed samples test test-api test-web lint typecheck format build smoke verify reset-db
+check-node:
+	@python3 scripts/check_node.py
+
+setup: check-node
 	@test -f .env || cp .env.example .env
 	uv sync --project apps/api --locked
 	cd apps/web && npm ci
 
 db:
+	@command -v docker >/dev/null || (echo 'Docker is unavailable. Start a local PostgreSQL server, set DATABASE_URL in .env, then run make seed. See README Quick Start.'; exit 1)
 	docker compose up -d --wait db
 
 migrate:
@@ -14,13 +18,13 @@ migrate:
 check-migrations:
 	cd apps/api && uv run python -m bottleiq.migrations
 
-dev:
+dev: check-node check-migrations
 	python3 scripts/dev.py
 
 api: check-migrations
 	cd apps/api && uv run uvicorn bottleiq.main:app --reload --host 127.0.0.1 --port 8000
 
-web:
+web: check-node
 	cd apps/web && npm run dev
 
 seed: migrate

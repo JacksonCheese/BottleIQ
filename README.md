@@ -52,16 +52,18 @@ Prerequisites: Node **22+**, npm **10+**, Python **3.12+**, [uv](https://docs.as
 After cloning your repository, run from its root:
 
 ```bash
-make setup                    # copies .env.example only if .env is absent; installs locked dependencies
-make db                       # starts local PostgreSQL and waits for readiness
-make seed                     # migrates and seeds the synthetic store
-make check-migrations         # confirms the database is ready for this code
-make dev                      # API + web; Ctrl-C stops both
+make setup
+make db
+make seed
+make check-migrations
+make dev
 ```
+
+Run these commands one line at a time. `make setup` copies `.env.example` only when `.env` is absent and installs locked dependencies. `make db` starts PostgreSQL through Docker; it requires Docker Compose. `make seed` migrates and adds a fictional store. Stop `make dev` with Control-C.
 
 Open **http://localhost:3000** and select **Try the Demo**. API docs: http://127.0.0.1:8000/docs. Health: http://127.0.0.1:8000/health.
 
-To use an existing PostgreSQL instead of Docker, set `DATABASE_URL` in `.env`, skip `make db`, and run `make seed`. The API loads root `.env` independently of its working directory. The web defaults to `http://127.0.0.1:8000`; export `API_URL` when overriding it (`API_URL=https://private-api.example npm run dev`). Next does not automatically read the repository-root `.env`.
+To use an existing PostgreSQL instead of Docker, start the server, set `DATABASE_URL` in `.env`, skip `make db`, and run `make seed`. A connection-refused error means the server at the host and port in `.env` is not running. If you use `nvm`, run `nvm use --delete-prefix 22` before setup when your shell selects an older Node version. Check with `node --version` and `npm --version`; BottleIQ requires Node 22+ and npm 10+. The API loads root `.env` independently of its working directory. The web defaults to `http://127.0.0.1:8000`; export `API_URL` when overriding it (`API_URL=https://private-api.example npm run dev`). Next does not automatically read the repository-root `.env`.
 
 Separate terminals are also supported:
 
