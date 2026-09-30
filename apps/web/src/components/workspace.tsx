@@ -14,10 +14,12 @@ import {
   ArrowUpRight,
   Store as StoreIcon,
   Menu,
+  Compass,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Store, User } from "@/lib/types";
 import { Logo, Loading, ErrorState } from "./ui";
+import { DemoWalkthrough } from "./demo-walkthrough";
 type WorkspaceState = {
   store: Store;
   user: User;
@@ -49,6 +51,7 @@ export function Workspace({ children }: { children: ReactNode }) {
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
   const [mobile, setMobile] = useState(false);
+  const [walkthroughStart, setWalkthroughStart] = useState(0);
   useEffect(() => {
     let active = true;
     Promise.all([api<User>("/auth/me"), api<Store[]>("/stores")])
@@ -145,7 +148,7 @@ export function Workspace({ children }: { children: ReactNode }) {
       </aside>
       <div className="workspace-main">
         <header className="topbar">
-          <div className="store-switch">
+          <div className="store-switch" data-tour="store-select">
             <StoreIcon size={18} />
             <select
               aria-label="Current store"
@@ -160,6 +163,15 @@ export function Workspace({ children }: { children: ReactNode }) {
             </select>
           </div>
           <div className="topbar-right">
+            {user.demo && (
+              <button
+                type="button"
+                className="tour-trigger"
+                onClick={() => setWalkthroughStart((value) => value + 1)}
+              >
+                <Compass size={16} /> Walkthrough
+              </button>
+            )}
             {user.demo && (
               <span className="demo-pill">
                 <span />
@@ -184,6 +196,9 @@ export function Workspace({ children }: { children: ReactNode }) {
               }}
             >
               <div key={store.id}>{children}</div>
+              {user.demo && (
+                <DemoWalkthrough store={store} start={walkthroughStart} />
+              )}
             </Context.Provider>
           )}
         </main>

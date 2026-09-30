@@ -13,7 +13,11 @@ make seed
 make dev
 ```
 
+`make db` requires Docker Compose. If you already run PostgreSQL locally, start it, set `DATABASE_URL` to that server, and skip `make db`.
+
 Open `http://localhost:3000` and select **Try the Demo**. `make seed` adds fictional data only; skip it for a real store. The API refuses to start if its database is behind the checked-in migrations and tells you to run `make migrate`. Run `make check-migrations` before each deployment. Keep `DEMO_ENABLED=false` and `COOKIE_SECURE=true` when `ENVIRONMENT=production`.
+
+For a first-time demonstration, select **Guided walkthrough** on the home page. It tours store selection, example inventory/sales/purchase CSV previews and column mapping, the daily dashboard and alerts, product-level recommendation math, and Smart Order review/export. Example CSVs are not saved; the tour may open a synthetic order draft for practice, but it never sends an order. Use **Walkthrough** in the demo header to replay it, or close it at any step.
 
 ## Bring in store data
 

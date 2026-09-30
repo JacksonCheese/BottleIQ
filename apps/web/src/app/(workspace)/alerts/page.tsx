@@ -18,7 +18,7 @@ export default function Page() {
       <PageTitle eyebrow="FOCUS WHERE IT MATTERS" title="Needs attention.">
         A practical list of risks, opportunities, and data to resolve.
       </PageTitle>
-      <div className="tabs">
+      <div className="tabs" data-tour="alert-filters">
         {[
           ["", "All alerts"],
           ["critical", "Critical"],

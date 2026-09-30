@@ -39,6 +39,7 @@ export default function Home() {
           </p>
           <div className="hero-actions">
             <DemoButton />
+            <DemoButton guided />
             <Link className="button secondary" href="/signup">
               Create your workspace
             </Link>

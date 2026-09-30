@@ -43,6 +43,17 @@ const optional: Record<string, string[]> = {
   sales: ["transaction_id", "line_id"],
   purchases: ["product_name", "line_id"],
 };
+function exampleCsv(kind: string) {
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const priorDay = new Date(Date.now() - 2 * 86400000)
+    .toISOString()
+    .slice(0, 10);
+  if (kind === "inventory")
+    return "sku,product_name,quantity_on_hand,unit_cost,retail_price,vendor,units_per_case\nTOUR-001,Example Whiskey,8,18,29,Example Distributor,12\n";
+  if (kind === "sales")
+    return `date,sku,product_name,units_sold,revenue,unit_price\n${priorDay},TOUR-001,Example Whiskey,4,116,29\n${yesterday},TOUR-001,Example Whiskey,3,87,29\n`;
+  return `purchase_date,vendor,sku,quantity,unit_cost,invoice_number\n${yesterday},Example Distributor,TOUR-001,12,18,EXAMPLE-001\n`;
+}
 export default function Page() {
   const { store, user } = useWorkspace();
   const [kind, setKind] = useState("inventory");
@@ -53,9 +64,11 @@ export default function Page() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ImportJob>();
+  const [samplePreview, setSamplePreview] = useState(false);
   const jobs = useResource<ImportJob[]>(`/imports?store_id=${store.id}`);
-  async function inspect(selected?: File) {
+  async function inspect(selected?: File, example = false) {
     setFile(selected);
+    setSamplePreview(example);
     setResult(undefined);
     setError("");
     setHeaders([]);
@@ -124,24 +137,46 @@ export default function Page() {
       <div className="import-layout">
         <Panel title="Import a CSV" subtitle="1. Choose your export type">
           <div className="padded">
-            <div className="tabs">
+            <div className="tabs" data-tour="import-tabs">
               {Object.keys(fields).map((k) => (
                 <button
                   key={k}
                   className={kind === k ? "active" : ""}
+                  data-tour-kind={k}
                   onClick={() => {
                     setKind(k);
                     setFile(undefined);
                     setHeaders([]);
                     setResult(undefined);
                     setError("");
+                    setSamplePreview(false);
                   }}
                 >
                   {k[0].toUpperCase() + k.slice(1)}
                 </button>
               ))}
             </div>
-            <label className="dropzone">
+            {user.demo && (
+              <div className="import-example" data-tour="import-example">
+                <button
+                  type="button"
+                  className="button secondary small"
+                  data-tour="sample-import"
+                  onClick={() =>
+                    inspect(
+                      new File([exampleCsv(kind)], `example-${kind}.csv`, {
+                        type: "text/csv",
+                      }),
+                      true,
+                    )
+                  }
+                >
+                  Preview example {kind} CSV
+                </button>
+                <span>Practice preview only. No demo data is saved.</span>
+              </div>
+            )}
+            <label className="dropzone" data-tour="import-upload">
               <Upload size={28} />
               <strong>{file ? file.name : "Choose your CSV export"}</strong>
               <span>UTF-8 CSV · Up to 10 MB · 100,000 rows</span>
@@ -159,7 +194,11 @@ export default function Page() {
                 <p className="muted-copy">
                   Select the column in your export for each BottleIQ field.
                 </p>
-                <div className="mapping-grid">
+                <div
+                  className="mapping-grid"
+                  data-tour="import-mapping"
+                  data-tour-preview-kind={samplePreview ? kind : undefined}
+                >
                   {[...fields[kind], ...optional[kind]].map((f) => (
                     <label key={f}>
                       {f.replaceAll("_", " ")}
@@ -206,13 +245,18 @@ export default function Page() {
                   className="button import-submit"
                   disabled={
                     busy ||
+                    samplePreview ||
                     user.role === "viewer" ||
                     fields[kind].some((f) => !mapping[f])
                   }
                   onClick={submit}
                 >
                   <Upload size={16} />
-                  {busy ? "Validating and importing…" : "Validate & import"}
+                  {samplePreview
+                    ? "Example preview — not imported"
+                    : busy
+                      ? "Validating and importing…"
+                      : "Validate & import"}
                 </button>
               </>
             )}

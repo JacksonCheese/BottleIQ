@@ -124,7 +124,7 @@ export default function Page() {
         Review your distributors, adjust cases, and export. You make the final
         call.
       </PageTitle>
-      <div className="order-controls">
+      <div className="order-controls" data-tour="order-controls">
         <label>
           Demand window
           <select
@@ -173,7 +173,7 @@ export default function Page() {
       ) : !metrics.data ? (
         <Loading />
       ) : (
-        <div className="vendor-grid">
+        <div className="vendor-grid" data-tour="vendor-grid">
           {groups.map((g) => (
             <article className="panel vendor-card" key={g.id}>
               <span className="vendor-icon">
@@ -217,7 +217,7 @@ export default function Page() {
             after recording incoming stock.
             {saved && <strong> Changes saved.</strong>}
           </div>
-          <div className="table-scroll">
+          <div className="table-scroll" data-tour="order-editor">
             <table>
               <thead>
                 <tr>
@@ -300,6 +300,7 @@ export default function Page() {
                 Save changes
               </button>
               <a
+                data-tour="order-export"
                 className={`button ${dirty ? "disabled" : ""}`}
                 aria-disabled={dirty}
                 role="link"
@@ -327,7 +328,7 @@ export default function Page() {
         {orders.error ? (
           <ErrorState message={orders.error} retry={orders.reload} />
         ) : (
-          <div className="compact-list">
+          <div className="compact-list" data-tour="saved-drafts">
             {orders.data?.map((o) => (
               <button
                 key={o.id}

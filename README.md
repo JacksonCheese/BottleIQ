@@ -27,6 +27,8 @@ Actual screenshots from the running seeded app:
 
 ![Editable distributor Smart Order](docs/screenshots/smart-order.png)
 
+![Guided walkthrough explaining CSV mapping](docs/screenshots/walkthrough-import.png)
+
 ## Architecture
 
 ```mermaid
@@ -79,7 +81,7 @@ For actual onboarding: create an account → create a store → import inventory
 
 `make seed` generates 96 fictional products, eight categories, four distributors, 210 days / 20,160 daily sales rows, 96 inventory snapshots, and 608 invoice lines. Includes fast movers, seasonal demand, slow/dead stock, overstocks, missing cost/vendor examples, and a recent demand spike.
 
-No demo password is required. **Try the Demo** works only when `DEMO_ENABLED=true`, and accesses the synthetic organization. Seeded account email is `demo@bottleiq.local`; its unknown random password is not a login credential. Do not upload customer data to the demo workspace.
+No demo password is required. **Try the Demo** works only when `DEMO_ENABLED=true`, and accesses the synthetic organization. Choose **Guided walkthrough** on the home page for a step-by-step tour from store selection and example CSV previews through analytics, alerts, product recommendations, and a synthetic Smart Order draft. The tour highlights each control, explains why it matters, and can be restarted from **Walkthrough** in the demo header. Example CSVs are preview-only and cannot be imported; the draft is never submitted to a distributor. Seeded account email is `demo@bottleiq.local`; its unknown random password is not a login credential. Do not upload customer data to the demo workspace.
 
 The seed is idempotent and resumes partial imports at the original fixture date. Existing demo history is not shifted forward over time. To refresh an old disposable demo database, use `make reset-db CONFIRM=yes` (deletes **all** data in the configured database). Never run that command against a live store database. `make samples` regenerates only the checked-in CSV examples using today's date.
 
@@ -137,7 +139,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Browser tests cover demo → dashboard → inventory → product → order editing/export, mobile navigation, and signup → store creation → mapped CSV ingestion. They save actual screenshots to `docs/screenshots/`. CI runs PostgreSQL backend checks, frontend checks/build, and the browser flow. See [engineering report](docs/engineering-report.md) for final counts/results.
+Browser tests cover demo → dashboard → inventory → product → order editing/export, the guided walkthrough, mobile navigation, and signup → store creation → mapped CSV ingestion. They save actual screenshots to `docs/screenshots/`. CI runs PostgreSQL backend checks, frontend checks/build, and the browser flow. See [engineering report](docs/engineering-report.md) for final counts/results.
 
 ## Environment Variables
 
@@ -185,18 +187,6 @@ Next: validate real POS exports and corrections, secure hosted onboarding, link 
 
 ## GitHub
 
-The repository is initialized locally. If GitHub CLI is available and authenticated:
-
-```bash
-gh repo create bottleiq --private --source=. --remote=origin --push
-```
-
-Otherwise create an empty **private** `bottleiq` repository on GitHub, then run (replace `YOUR_GITHUB_USERNAME`):
-
-```bash
-git remote add origin git@github.com:YOUR_GITHUB_USERNAME/bottleiq.git
-git branch -M main
-git push -u origin main
-```
+The canonical repository is [JacksonCheese/BottleIQ](https://github.com/JacksonCheese/BottleIQ). In an existing clone, pull `main` in GitHub Desktop or run `git pull --ff-only origin main` before using the quick-start commands.
 
 MIT licensed. Synthetic names/data are generated for demonstration; no third-party transaction dataset is included.

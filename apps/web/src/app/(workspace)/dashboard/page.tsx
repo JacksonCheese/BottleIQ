@@ -81,6 +81,7 @@ export default function DashboardPage() {
               action="Review suggested order"
               icon={<ShoppingCart aria-hidden="true" size={23} />}
               tone="primary"
+              tourId="dashboard-order"
             />
             <DecisionCard
               label="PREVENT STOCKOUTS"
@@ -90,6 +91,7 @@ export default function DashboardPage() {
               action="Review low stock"
               icon={<TriangleAlert aria-hidden="true" size={23} />}
               tone="warning"
+              tourId="dashboard-stockout"
             />
             <DecisionCard
               label="FREE TRAPPED CASH"
@@ -99,6 +101,7 @@ export default function DashboardPage() {
               action="Review slow stock"
               icon={<CircleDollarSign aria-hidden="true" size={23} />}
               tone="neutral"
+              tourId="dashboard-cash"
             />
           </div>
 

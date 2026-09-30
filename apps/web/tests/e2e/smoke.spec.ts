@@ -62,11 +62,12 @@ test("demo owner can inspect inventory and edit/export a Smart Order", async ({
     ),
   ).toBeVisible();
   const incomingUnits = product.units_per_case * 2;
+  const receiptReference = `Pilot smoke test ${Date.now()}`;
   await page.getByLabel("Confirmed incoming units").fill(String(incomingUnits));
   await page
     .getByLabel("Expected date")
     .fill(new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10));
-  await page.getByLabel("Order reference (optional)").fill("Pilot smoke test");
+  await page.getByLabel("Order reference (optional)").fill(receiptReference);
   const [updatedResponse] = await Promise.all([
     page.waitForResponse((response) =>
       /\/api\/products\/[^?]+\?store_id=/.test(response.url()),
@@ -93,12 +94,17 @@ test("demo owner can inspect inventory and edit/export a Smart Order", async ({
       `Recommended: ${updated.recommended_cases} cases · ${updated.recommended_units} units`,
     ),
   ).toBeVisible();
-  await page.getByLabel("Units arrived").fill(String(product.units_per_case));
+  const receipt = page
+    .locator(".incoming-item")
+    .filter({ hasText: receiptReference });
+  await receipt
+    .getByLabel("Units arrived")
+    .fill(String(product.units_per_case));
   const [receivedResponse] = await Promise.all([
     page.waitForResponse((response) =>
       /\/api\/products\/[^?]+\?store_id=/.test(response.url()),
     ),
-    page.getByRole("button", { name: "Record receipt" }).click(),
+    receipt.getByRole("button", { name: "Record receipt" }).click(),
   ]);
   const received = await receivedResponse.json();
   expect(received.current_quantity).toBe(

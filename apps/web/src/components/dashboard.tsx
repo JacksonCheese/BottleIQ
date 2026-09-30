@@ -25,6 +25,7 @@ export function DecisionCard({
   action,
   icon,
   tone,
+  tourId,
 }: {
   label: string;
   value: string;
@@ -33,9 +34,14 @@ export function DecisionCard({
   action: string;
   icon: ReactNode;
   tone: "primary" | "warning" | "neutral";
+  tourId?: string;
 }) {
   return (
-    <Link href={href} className={`dashboard-decision ${tone}`}>
+    <Link
+      href={href}
+      className={`dashboard-decision ${tone}`}
+      data-tour={tourId}
+    >
       <span className="dashboard-decision-top">
         <span>{label}</span>
         <span className="dashboard-decision-icon">{icon}</span>

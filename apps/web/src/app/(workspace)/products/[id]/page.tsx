@@ -41,7 +41,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         {m.size} · {m.vendor_name || "No distributor assigned"} · ABC class{" "}
         {m.abc}
       </PageTitle>
-      <div className="recommendation-callout">
+      <div className="recommendation-callout" data-tour="recommendation">
         <ShoppingCart size={24} />
         <div>
           <strong>
@@ -260,7 +260,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       </Panel>
       <div className="dashboard-grid">
         <Panel title="The math behind the recommendation">
-          <dl className="definition-list">
+          <dl className="definition-list" data-tour="recommendation-math">
             {[
               [
                 "Average daily demand",

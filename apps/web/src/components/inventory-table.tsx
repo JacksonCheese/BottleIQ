@@ -73,7 +73,7 @@ export function InventoryTable({
     ["Order", "recommended_cases"],
   ];
   return (
-    <section className="panel">
+    <section className="panel" data-tour="inventory-table">
       <div className="filters">
         <div className="search-input">
           <Search size={17} />
