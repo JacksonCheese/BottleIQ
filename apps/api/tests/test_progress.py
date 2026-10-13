@@ -5,7 +5,17 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from bottleiq.models import InventorySnapshot, Product, ProgressBaseline, Sale, User
+from bottleiq.auth import passwords
+from bottleiq.models import (
+    InventorySnapshot,
+    Organization,
+    OrganizationMember,
+    Product,
+    ProgressBaseline,
+    Sale,
+    Store,
+    User,
+)
 from bottleiq.services.progress import (
     TrackingExists,
     progress_report,
@@ -143,3 +153,54 @@ def test_revenue_without_a_cost_is_kept_out_of_profit(db, store):
     current = progress_report(db, store, today=TODAY)["months"][-1]
     assert current["gross_profit"] == 0
     assert current["revenue_without_cost"] == current["revenue"] == 380
+
+
+def test_owner_can_start_read_and_restart_tracking(client, db, store):
+    seed(db, store, days=30)
+    params = {"store_id": store.id}
+    client.cookies.clear()
+    assert client.get("/progress", params=params).status_code == 401
+    client.post("/auth/login", json={"email": "owner@example.com", "password": "test-password-123"})
+    early = client.post("/progress", json={**params, "started_on": "2020-01-01"})
+    assert early.status_code == 422 and "inventory count" in early.json()["detail"]
+    started = client.post("/progress", json=params)
+    assert started.status_code == 201
+    assert started.json()["baseline"]["metrics"]["product_count"] == 1
+    assert client.post("/progress", json=params).status_code == 409
+    assert client.get("/progress", params=params).json()["baseline"] is not None
+    assert client.delete("/progress", params=params).status_code == 204
+    assert client.get("/progress", params=params).json()["baseline"] is None
+
+
+def test_viewers_can_read_but_not_change_tracking(client, db, store):
+    seed(db, store, days=30)
+    viewer = User(
+        email="viewer@example.com",
+        name="Viewer",
+        password_hash=passwords.hash("test-password-123"),
+    )
+    db.add(viewer)
+    db.flush()
+    db.add(
+        OrganizationMember(organization_id=store.organization_id, user_id=viewer.id, role="viewer")
+    )
+    db.commit()
+    client.post(
+        "/auth/login", json={"email": "viewer@example.com", "password": "test-password-123"}
+    )
+    params = {"store_id": store.id}
+    assert client.get("/progress", params=params).status_code == 200
+    assert client.post("/progress", json=params).status_code == 403
+    assert client.delete("/progress", params=params).status_code == 403
+
+
+def test_other_tenant_progress_is_hidden(client, db):
+    org = Organization(name="Other")
+    db.add(org)
+    db.flush()
+    other = Store(organization_id=org.id, name="Other shop")
+    db.add(other)
+    db.commit()
+    assert client.get("/progress", params={"store_id": other.id}).status_code == 404
+    assert client.post("/progress", json={"store_id": other.id}).status_code == 404
+    assert client.delete("/progress", params={"store_id": other.id}).status_code == 404

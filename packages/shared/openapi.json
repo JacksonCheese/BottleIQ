@@ -1557,6 +1557,120 @@
           }
         }
       }
+    },
+    "/progress": {
+      "get": {
+        "tags": [
+          "Progress"
+        ],
+        "summary": "Progress",
+        "operationId": "progress_progress_get",
+        "parameters": [
+          {
+            "name": "store_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Store Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Progress"
+        ],
+        "summary": "Start",
+        "operationId": "start_progress_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgressStart"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Progress"
+        ],
+        "summary": "Restart",
+        "operationId": "restart_progress_delete",
+        "parameters": [
+          {
+            "name": "store_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Store Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2638,6 +2752,320 @@
           "brand"
         ],
         "title": "ProductEdit"
+      },
+      "ProgressBaselineView": {
+        "properties": {
+          "started_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Started On"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/ProgressHeadline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "started_on",
+          "created_at",
+          "metrics"
+        ],
+        "title": "ProgressBaselineView"
+      },
+      "ProgressComparison": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "too_early",
+              "no_history",
+              "before_after",
+              "year_over_year"
+            ],
+            "title": "Kind"
+          },
+          "days_tracked": {
+            "type": "integer",
+            "title": "Days Tracked"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "total",
+              "per_30_days"
+            ],
+            "title": "Basis"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "days_tracked",
+          "basis",
+          "since",
+          "before"
+        ],
+        "title": "ProgressComparison"
+      },
+      "ProgressHeadline": {
+        "properties": {
+          "inventory_value": {
+            "type": "number",
+            "title": "Inventory Value"
+          },
+          "dead_value": {
+            "type": "number",
+            "title": "Dead Value"
+          },
+          "slow_value": {
+            "type": "number",
+            "title": "Slow Value"
+          },
+          "stockout_risks": {
+            "type": "integer",
+            "title": "Stockout Risks"
+          },
+          "product_count": {
+            "type": "integer",
+            "title": "Product Count"
+          },
+          "missing_cost_count": {
+            "type": "integer",
+            "title": "Missing Cost Count"
+          },
+          "revenue_90": {
+            "type": "number",
+            "title": "Revenue 90"
+          },
+          "gross_profit_90": {
+            "type": "number",
+            "title": "Gross Profit 90"
+          },
+          "snapshot_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "inventory_value",
+          "dead_value",
+          "slow_value",
+          "stockout_risks",
+          "product_count",
+          "missing_cost_count",
+          "revenue_90",
+          "gross_profit_90",
+          "snapshot_at"
+        ],
+        "title": "ProgressHeadline"
+      },
+      "ProgressMonth": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "revenue": {
+            "type": "number",
+            "title": "Revenue"
+          },
+          "gross_profit": {
+            "type": "number",
+            "title": "Gross Profit"
+          },
+          "revenue_without_cost": {
+            "type": "number",
+            "title": "Revenue Without Cost"
+          },
+          "month": {
+            "type": "string",
+            "title": "Month"
+          },
+          "month_to_date": {
+            "type": "boolean",
+            "title": "Month To Date"
+          },
+          "last_year": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "days",
+          "revenue",
+          "gross_profit",
+          "revenue_without_cost",
+          "month",
+          "month_to_date",
+          "last_year"
+        ],
+        "title": "ProgressMonth"
+      },
+      "ProgressPeriod": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "revenue": {
+            "type": "number",
+            "title": "Revenue"
+          },
+          "gross_profit": {
+            "type": "number",
+            "title": "Gross Profit"
+          },
+          "revenue_without_cost": {
+            "type": "number",
+            "title": "Revenue Without Cost"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "days",
+          "revenue",
+          "gross_profit",
+          "revenue_without_cost"
+        ],
+        "title": "ProgressPeriod"
+      },
+      "ProgressStart": {
+        "properties": {
+          "store_id": {
+            "type": "string",
+            "title": "Store Id"
+          },
+          "started_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started On"
+          }
+        },
+        "type": "object",
+        "required": [
+          "store_id"
+        ],
+        "title": "ProgressStart"
+      },
+      "ProgressView": {
+        "properties": {
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressBaselineView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current": {
+            "$ref": "#/components/schemas/ProgressHeadline"
+          },
+          "comparison": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressComparison"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressMonth"
+            },
+            "type": "array",
+            "title": "Months"
+          }
+        },
+        "type": "object",
+        "required": [
+          "today",
+          "baseline",
+          "current",
+          "comparison",
+          "months"
+        ],
+        "title": "ProgressView"
       },
       "ReceiptInput": {
         "properties": {

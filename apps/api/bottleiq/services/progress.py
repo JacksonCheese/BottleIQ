@@ -161,9 +161,7 @@ def totals(
     }
 
 
-def comparison(
-    period: partial, started_on: date, today: date, first_sale: date | None
-) -> dict:
+def comparison(period: partial, started_on: date, today: date, first_sale: date | None) -> dict:
     days = (today - started_on).days
     result: dict = {
         "kind": "too_early",

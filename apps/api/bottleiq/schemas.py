@@ -251,3 +251,57 @@ class DashboardView(BaseModel):
     actions: list[Metrics]
     product_count: int
     latest_snapshot: date | None
+
+
+class ProgressHeadline(BaseModel):
+    inventory_value: float
+    dead_value: float
+    slow_value: float
+    stockout_risks: int
+    product_count: int
+    missing_cost_count: int
+    revenue_90: float
+    gross_profit_90: float
+    snapshot_at: date | None
+
+
+class ProgressBaselineView(BaseModel):
+    started_on: date
+    created_at: datetime
+    metrics: ProgressHeadline
+
+
+class ProgressPeriod(BaseModel):
+    start: date
+    end: date
+    days: int
+    revenue: float
+    gross_profit: float
+    revenue_without_cost: float
+
+
+class ProgressComparison(BaseModel):
+    kind: Literal["too_early", "no_history", "before_after", "year_over_year"]
+    days_tracked: int
+    basis: Literal["total", "per_30_days"]
+    since: ProgressPeriod | None
+    before: ProgressPeriod | None
+
+
+class ProgressMonth(ProgressPeriod):
+    month: str
+    month_to_date: bool
+    last_year: ProgressPeriod | None
+
+
+class ProgressView(BaseModel):
+    today: date
+    baseline: ProgressBaselineView | None
+    current: ProgressHeadline
+    comparison: ProgressComparison | None
+    months: list[ProgressMonth]
+
+
+class ProgressStart(BaseModel):
+    store_id: str
+    started_on: date | None = None

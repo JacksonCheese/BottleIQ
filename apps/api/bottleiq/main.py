@@ -15,7 +15,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from bottleiq.config import settings
 from bottleiq.db import SessionLocal
 from bottleiq.migrations import check_migrations
-from bottleiq.routes import auth, catalog, imports, incoming, orders
+from bottleiq.routes import auth, catalog, imports, incoming, orders, progress
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("bottleiq")
@@ -127,5 +127,12 @@ def health() -> JSONResponse:
         return JSONResponse({"status": "unavailable", "database": "unreachable"}, 503)
 
 
-for router in (auth.router, catalog.router, imports.router, incoming.router, orders.router):
+for router in (
+    auth.router,
+    catalog.router,
+    imports.router,
+    incoming.router,
+    orders.router,
+    progress.router,
+):
     app.include_router(router)
