@@ -42,20 +42,25 @@ def jobs(
 
 
 def job_dict(job: ImportJob) -> dict:
+    # Warnings share the stored summary column; imported rows with notes are not rejections.
+    entries = job.error_summary or []
     return {
-        field: getattr(job, field)
-        for field in (
-            "id",
-            "filename",
-            "import_type",
-            "status",
-            "row_count",
-            "rows_imported",
-            "rows_rejected",
-            "rows_duplicate",
-            "error_summary",
-            "created_at",
-        )
+        **{
+            field: getattr(job, field)
+            for field in (
+                "id",
+                "filename",
+                "import_type",
+                "status",
+                "row_count",
+                "rows_imported",
+                "rows_rejected",
+                "rows_duplicate",
+                "created_at",
+            )
+        },
+        "error_summary": [e for e in entries if e.get("level") != "warning"],
+        "warnings": [e for e in entries if e.get("level") == "warning"],
     }
 
 
@@ -71,7 +76,11 @@ def rejected_rows(
     if not job:
         raise HTTPException(404, "Import not found")
     return (
-        "\n".join(f"Row {e['row']}: {e['message']}" for e in job.error_summary)
+        "\n".join(
+            f"Row {e['row']}{' (imported with a note)' if e.get('level') == 'warning' else ''}: "
+            f"{e['message']}"
+            for e in job.error_summary
+        )
         or "No rejected rows"
     )
 

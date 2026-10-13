@@ -4,7 +4,7 @@ Start at `/imports`. Choose inventory, sales, or purchases, select a UTF-8 CSV (
 
 ```csv
 # sales.csv
- date,sku,product_name,units_sold,revenue,unit_price
+ date,sku,product_name,units_sold,revenue
 # inventory.csv
  sku,product_name,quantity_on_hand,unit_cost,retail_price
 # purchases.csv
@@ -13,15 +13,16 @@ Start at `/imports`. Choose inventory, sales, or purchases, select a UTF-8 CSV (
 
 (The leading spaces and comment lines above are for explanation; use the actual sample files as templates.)
 
-Dates: `YYYY-MM-DD`, no future dates. Numbers: nonnegative, finite, up to 10,000,000. Whole bottles only. Monetary input accepts `$` and commas when correctly CSV-quoted, and at most two decimal places. A blank inventory cost is preserved as unknown and blocks purchasing; it is not treated as zero. Negative sales/returns are rejected: reconcile returns outside BottleIQ until signed inventory movement accounting is implemented.
+Dates: `YYYY-MM-DD` or US `MM/DD/YYYY` (also `M/D/YY`); a trailing time such as `2026-01-05T14:30:00` or `1/5/2026 2:30 PM` is ignored. Day-first dates are not supported. No future dates. Numbers: nonnegative, finite, up to 10,000,000. Whole bottles only. Monetary input accepts `$` and commas when correctly CSV-quoted, and at most two decimal places. A blank inventory cost is preserved as unknown and blocks purchasing; it is not treated as zero. Negative sales/returns are rejected: reconcile returns outside BottleIQ until signed inventory movement accounting is implemented. A negative inventory `quantity_on_hand` (common when a POS sells stock that was never received) is recorded as 0 and the row is imported with a warning asking for a shelf count; warnings appear separately from rejections in the job result and rejection report.
 
 Optional inventory columns: `snapshot_at`, `category`, `brand`, `size`, `units_per_case`, `upc`, `vendor`. Omitted snapshot date defaults to today in the store's timezone. Omitted case pack defaults to 12; imported vendors default to four-day lead time. Verify these in product and distributor settings before ordering. Inventory can enrich product metadata discovered in an earlier sales import. Distributor assignment is only filled when absent; explicit reassignment is through product settings.
 
-Optional sale columns: `transaction_id`, `line_id`. Optional purchase columns: `line_id`, `product_name`. Missing products are created using organization-scoped SKUs. Leading zeros are preserved.
+Optional sale columns: `unit_price`, `transaction_id`, `line_id`. When `unit_price` is absent it is derived as revenue ÷ units, so transaction exports that report only line totals (such as Square's item detail CSV) import directly. Optional purchase columns: `line_id`, `product_name`. Missing products are created using organization-scoped SKUs. Leading zeros are preserved.
 
 ## Duplicate semantics
 
 - Sales identity: `(store, SKU, date, transaction_id, line_id)`. Without transaction/line IDs, the contract is one daily aggregate per SKU. Aggregate multiple transactions before importing, or supply stable IDs. Identical anonymous transactions cannot be distinguished and are intentionally deduplicated.
+- Within one file, sale lines that share a SKU, date, and `transaction_id` but have no `line_id` are summed into one record, because transaction exports list each scan separately. The import counts every source line. Overlapping files containing the same whole transactions remain idempotent.
 - Inventory identity: `(store, SKU, snapshot_date)`.
 - Purchase identity: `(store, SKU, purchase_date, vendor, invoice_number, line_id)`.
 - A content hash distinguishes exact duplicates from different values sharing an identity.

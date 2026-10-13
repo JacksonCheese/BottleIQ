@@ -20,7 +20,7 @@ const fields: Record<string, string[]> = {
     "unit_cost",
     "retail_price",
   ],
-  sales: ["date", "sku", "product_name", "units_sold", "revenue", "unit_price"],
+  sales: ["date", "sku", "product_name", "units_sold", "revenue"],
   purchases: [
     "purchase_date",
     "vendor",
@@ -40,7 +40,7 @@ const optional: Record<string, string[]> = {
     "upc",
     "vendor",
   ],
-  sales: ["transaction_id", "line_id"],
+  sales: ["unit_price", "transaction_id", "line_id"],
   purchases: ["product_name", "line_id"],
 };
 function exampleCsv(kind: string) {
@@ -301,6 +301,24 @@ export default function Page() {
                       </ul>
                     </>
                   )}
+                  {result.warnings.length > 0 && (
+                    <>
+                      <p>
+                        {result.warnings.length}{" "}
+                        {result.warnings.length === 1
+                          ? "row needs"
+                          : "rows need"}{" "}
+                        a closer look:
+                      </p>
+                      <ul>
+                        {result.warnings.slice(0, 5).map((e) => (
+                          <li key={e.row}>
+                            Row {e.row}: {e.message}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -317,21 +335,23 @@ export default function Page() {
               </p>
               <p>
                 <strong>Sales:</strong> at least 90 days is best. Use daily
-                totals per SKU, or unique transaction and line IDs for
-                transaction exports.
+                totals per SKU, or a transaction export with transaction IDs.
+                Repeated lines for a product in one transaction are added
+                together. Unit price is optional.
               </p>
               <p>
                 <strong>Purchases:</strong> quantities are individual units, not
                 cases. Include a distributor and invoice number.
               </p>
               <p>
-                <strong>Dates:</strong> use YYYY-MM-DD. An omitted inventory
-                date means today in the store’s timezone.
+                <strong>Dates:</strong> YYYY-MM-DD or MM/DD/YYYY. An omitted
+                inventory date means today in the store’s timezone.
               </p>
               <p>
                 Identical rows are skipped. Conflicting duplicates are rejected,
-                preserving existing records. Negative quantities and returns
-                need source reconciliation before import.
+                preserving existing records. Negative on-hand counts are
+                recorded as 0 and flagged for a shelf count. Returns need source
+                reconciliation before import.
               </p>
             </div>
           </Panel>

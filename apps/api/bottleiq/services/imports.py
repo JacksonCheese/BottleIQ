@@ -4,10 +4,11 @@ import csv
 import hashlib
 import io
 import json
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import PurePath
 from zoneinfo import ZoneInfo
 
@@ -18,7 +19,7 @@ from sqlalchemy.orm import Session
 from bottleiq.models import ImportJob, InventorySnapshot, Product, Purchase, Sale, Store, Vendor
 
 FIELDS = {
-    "sales": ["date", "sku", "product_name", "units_sold", "revenue", "unit_price"],
+    "sales": ["date", "sku", "product_name", "units_sold", "revenue"],
     "inventory": ["sku", "product_name", "quantity_on_hand", "unit_cost", "retail_price"],
     "purchases": ["purchase_date", "vendor", "sku", "quantity", "unit_cost", "invoice_number"],
 }
@@ -33,7 +34,9 @@ OPTIONAL = [
     "transaction_id",
     "line_id",
     "product_name",
+    "unit_price",
 ]
+US_DATE = re.compile(r"(\d{1,2})/(\d{1,2})/(\d{4}|\d{2})")
 
 
 def digest(value: object) -> str:
@@ -57,10 +60,16 @@ def number(value: str, field: str, integer: bool = False, nullable: bool = False
 
 
 def parse_date(value: str, field: str, today: date) -> date:
+    # POS exports often append a time, and spreadsheets resave dates as M/D/YYYY.
+    text = re.split(r"[T\s]", value.strip(), maxsplit=1)[0]
     try:
-        parsed = date.fromisoformat(value)
+        if match := US_DATE.fullmatch(text):
+            month, day, year = (int(part) for part in match.groups())
+            parsed = date(year + 2000 if year < 100 else year, month, day)
+        else:
+            parsed = date.fromisoformat(text)
     except ValueError as exc:
-        raise ValueError(f"{field}: use YYYY-MM-DD") from exc
+        raise ValueError(f"{field}: use YYYY-MM-DD or MM/DD/YYYY") from exc
     if parsed > today:
         raise ValueError(f"{field}: future dates are not supported")
     return parsed
@@ -166,6 +175,42 @@ def cache_for(db: Session, store: Store, kind: str) -> ImportCache:
     )
 
 
+def combine_transaction_lines(rows: list[dict[str, str]]) -> list[tuple[list[int], dict[str, str]]]:
+    """Group sale lines that share an identity, keeping each group's source row numbers.
+
+    Transaction exports such as Square's item detail have no line ID, so one sale can
+    list the same SKU twice. Those lines are summed instead of being deduplicated.
+    Unparseable lines stay separate so they are rejected with their own row number.
+    """
+    entries: list[tuple[list[int], dict[str, str]]] = []
+    open_lines: dict[tuple[str, str, str], int] = {}
+    for index, row in enumerate(rows, start=2):
+        mergeable = bool(row["transaction_id"]) and not row["line_id"]
+        key = (row["sku"], row["date"], row["transaction_id"])
+        position = open_lines.get(key) if mergeable else None
+        if position is not None:
+            indexes, target = entries[position]
+            try:
+                units = (number(target["units_sold"], "units_sold", integer=True) or 0) + (
+                    number(row["units_sold"], "units_sold", integer=True) or 0
+                )
+                revenue = (number(target["revenue"], "revenue") or 0) + (
+                    number(row["revenue"], "revenue") or 0
+                )
+            except ValueError:
+                entries.append(([index], dict(row)))
+                continue
+            target["units_sold"], target["revenue"] = str(units), str(revenue)
+            if target["unit_price"] != row["unit_price"]:
+                target["unit_price"] = ""  # recomputed from the combined totals
+            indexes.append(index)
+            continue
+        if mergeable:
+            open_lines[key] = len(entries)
+        entries.append(([index], dict(row)))
+    return entries
+
+
 def import_csv(
     db: Session,
     store: Store,
@@ -200,30 +245,37 @@ def import_csv(
     )
     db.add(job)
     db.flush()
-    errors = []
+    errors, warnings = [], []
     cache = cache_for(db, store, kind)
     imported, duplicate, rejected = 0, 0, 0
     today = datetime.now(ZoneInfo(store.timezone)).date()
-    for index, row in enumerate(rows, start=2):
+    entries = (
+        combine_transaction_lines(rows)
+        if kind == "sales"
+        else [([index], row) for index, row in enumerate(rows, start=2)]
+    )
+    for indexes, row in entries:
+        notes: list[str] = []
         try:
             with db.begin_nested():
-                outcome = import_row(db, store, kind, row, today, cache)
+                outcome = import_row(db, store, kind, row, today, cache, notes)
             if outcome:
-                imported += 1
+                imported += len(indexes)
             else:
-                duplicate += 1
+                duplicate += len(indexes)
+            warnings += [{"row": indexes[0], "message": n, "level": "warning"} for n in notes]
         except (ValueError, IntegrityError) as exc:
-            rejected += 1
+            rejected += len(indexes)
             errors.append(
                 {
-                    "row": index,
+                    "row": indexes[0],
                     "message": str(exc)
                     if isinstance(exc, ValueError)
                     else "Conflicting or invalid record; check identifiers and duplicates",
                 }
             )
     job.rows_imported, job.rows_duplicate, job.rows_rejected = imported, duplicate, rejected
-    job.error_summary = errors
+    job.error_summary = errors + warnings
     job.status = (
         "completed"
         if not errors
@@ -236,8 +288,15 @@ def import_csv(
 
 
 def import_row(
-    db: Session, store: Store, kind: str, row: dict[str, str], today: date, cache: ImportCache
+    db: Session,
+    store: Store,
+    kind: str,
+    row: dict[str, str],
+    today: date,
+    cache: ImportCache,
+    notes: list[str] | None = None,
 ) -> bool:
+    notes = [] if notes is None else notes
     sku = required(row, "sku", 80)
     org = store.organization_id
     product = cache.products.get(sku)
@@ -288,23 +347,36 @@ def import_row(
     model: type[Sale] | type[InventorySnapshot] | type[Purchase]
     if kind == "sales":
         day = parse_date(required(row, "date"), "date", today)
-        quantity = number(row["units_sold"], "units_sold", integer=True)
+        quantity = number(row["units_sold"], "units_sold", integer=True) or Decimal(0)
+        revenue = number(row["revenue"], "revenue") or Decimal(0)
+        # Transaction exports report line totals only; derive the price when it is absent.
+        unit_price = number(row.get("unit_price", ""), "unit_price", nullable=True)
+        if unit_price is None:
+            unit_price = (revenue / quantity if quantity else revenue).quantize(
+                Decimal("0.01"), ROUND_HALF_UP
+            )
         values.update(
             sold_at=day,
-            quantity=int(quantity or 0),
-            gross_revenue=number(row["revenue"], "revenue"),
-            unit_price=number(row["unit_price"], "unit_price"),
+            quantity=int(quantity),
+            gross_revenue=revenue,
+            unit_price=unit_price,
             transaction_id=row.get("transaction_id") or None,
         )
         key = [sku, day, row.get("transaction_id", ""), row.get("line_id", "")]
         model = Sale
     elif kind == "inventory":
         day = parse_date(row.get("snapshot_at") or today.isoformat(), "snapshot_at", today)
+        on_hand = row["quantity_on_hand"].strip()
+        # POS systems go negative when sales are rung up for stock that was never received.
+        if re.fullmatch(r"-\d+(\.0+)?", on_hand) and Decimal(on_hand) < 0:
+            notes.append(
+                f"quantity_on_hand was {on_hand} in the export and was recorded as 0. "
+                "Count this product on the shelf and correct it in the POS."
+            )
+            on_hand = "0"
         values.update(
             snapshot_at=day,
-            quantity_on_hand=int(
-                number(row["quantity_on_hand"], "quantity_on_hand", integer=True) or 0
-            ),
+            quantity_on_hand=int(number(on_hand, "quantity_on_hand", integer=True) or 0),
             unit_cost=number(row["unit_cost"], "unit_cost", nullable=True),
             retail_price=number(row["retail_price"], "retail_price"),
         )

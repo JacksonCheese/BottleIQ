@@ -1,8 +1,12 @@
+from datetime import date
+from decimal import Decimal
+
 import pytest
 from sqlalchemy import func, select
 
 from bottleiq.models import InventorySnapshot, Product, Sale
-from bottleiq.services.imports import GenericCSVImporter, import_csv, number
+from bottleiq.routes.imports import job_dict
+from bottleiq.services.imports import GenericCSVImporter, import_csv, number, parse_date
 
 INVENTORY = b"sku,product_name,quantity_on_hand,unit_cost,retail_price\n001,Test whiskey,8,18,29\n"
 
@@ -127,3 +131,68 @@ def test_inventory_enriches_product_imported_from_sales(db, store):
     product = db.scalar(select(Product))
     assert product.category == "Whiskey" and product.units_per_case == 6
     assert product.default_vendor_id is not None
+
+
+def test_sales_unit_price_is_optional_and_derived(db, store):
+    content = b"date,sku,product_name,units_sold,revenue\n2026-01-01,001,Test,3,$87.00\n"
+    assert import_csv(db, store, "sales", content, "s.csv").rows_imported == 1
+    assert db.scalar(select(Sale)).unit_price == Decimal("29.00")
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["2026-01-05", "1/5/2026", "01/05/2026", "1/5/26", "2026-01-05T14:30:00", "1/5/2026 2:30 PM"],
+)
+def test_common_pos_date_formats_accepted(value):
+    assert parse_date(value, "date", date(2026, 2, 1)) == date(2026, 1, 5)
+
+
+@pytest.mark.parametrize("value", ["13/5/2026", "2026/01/05", "Jan 5 2026", ""])
+def test_unrecognized_dates_rejected(value):
+    with pytest.raises(ValueError, match="YYYY-MM-DD or MM/DD/YYYY"):
+        parse_date(value, "date", date(2026, 2, 1))
+
+
+def test_repeated_lines_in_one_transaction_are_summed(db, store):
+    content = (
+        b"date,sku,product_name,units_sold,revenue,transaction_id\n"
+        b"2026-01-01,001,Test,1,$29.00,t1\n"
+        b"2026-01-01,001,Test,2,$58.00,t1\n"
+        b"2026-01-01,001,Test,1,$29.00,t2\n"
+    )
+    job = import_csv(db, store, "sales", content, "s.csv")
+    assert (job.rows_imported, job.rows_duplicate, job.rows_rejected) == (3, 0, 0)
+    assert db.scalar(select(func.count()).select_from(Sale)) == 2
+    assert db.scalar(select(func.sum(Sale.quantity))) == 4
+    overlap = import_csv(db, store, "sales", content + b"2026-01-02,001,Test,1,29,t3\n", "s2.csv")
+    assert (overlap.rows_imported, overlap.rows_duplicate, overlap.rows_rejected) == (1, 3, 0)
+
+
+def test_refund_line_is_rejected_without_blocking_its_transaction(db, store):
+    content = (
+        b"date,sku,product_name,units_sold,revenue,transaction_id\n"
+        b"2026-01-01,001,Test,1,29,t1\n"
+        b"2026-01-01,001,Test,-1,-29,t1\n"
+    )
+    job = import_csv(db, store, "sales", content, "s.csv")
+    assert (job.rows_imported, job.rows_rejected) == (1, 1)
+    assert job.error_summary[0]["row"] == 3
+
+
+def test_lines_with_line_ids_are_not_combined(db, store):
+    content = (
+        b"date,sku,product_name,units_sold,revenue,transaction_id,line_id\n"
+        b"2026-01-01,001,Test,1,29,t1,1\n"
+        b"2026-01-01,001,Test,1,29,t1,1\n"
+    )
+    job = import_csv(db, store, "sales", content, "s.csv")
+    assert (job.rows_imported, job.rows_duplicate) == (1, 1)
+
+
+def test_negative_on_hand_is_recorded_as_zero_with_a_warning(db, store):
+    job = import_csv(db, store, "inventory", INVENTORY.replace(b",8,", b",-3,"), "a.csv")
+    assert (job.rows_imported, job.rows_rejected, job.status) == (1, 0, "completed")
+    assert db.scalar(select(InventorySnapshot)).quantity_on_hand == 0
+    view = job_dict(job)
+    assert view["error_summary"] == []
+    assert view["warnings"][0]["row"] == 2 and "-3" in view["warnings"][0]["message"]

@@ -200,6 +200,7 @@ class ImportJobView(BaseModel):
     rows_rejected: int
     rows_duplicate: int
     error_summary: list[RejectedRow]
+    warnings: list[RejectedRow] = []
     created_at: datetime
 
 

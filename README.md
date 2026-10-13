@@ -89,13 +89,13 @@ The seed is idempotent and resumes partial imports at the original fixture date.
 
 | Import | Required canonical columns |
 | --- | --- |
-| Sales | `date, sku, product_name, units_sold, revenue, unit_price` |
+| Sales | `date, sku, product_name, units_sold, revenue` (`unit_price` optional) |
 | Inventory | `sku, product_name, quantity_on_hand, unit_cost, retail_price` |
 | Purchases | `purchase_date, vendor, sku, quantity, unit_cost, invoice_number` |
 
-Map different headers in the UI. Use UTF-8, ISO dates, whole nonnegative units, USD prices with ≤2 decimals. Inventory cost can be blank (blocks ordering). File maximum: 10 MB / 100,000 rows. Default case pack: 12; newly discovered vendor lead time: 4 days. Review both before purchasing.
+Map different headers in the UI. Use UTF-8, ISO or US (MM/DD/YYYY) dates, whole nonnegative units (negative on-hand counts import as 0 with a warning), USD prices with ≤2 decimals. Inventory cost can be blank (blocks ordering). File maximum: 10 MB / 100,000 rows. Default case pack: 12; newly discovered vendor lead time: 4 days. Review both before purchasing.
 
-Daily sales exports need one row per date/SKU; transaction exports need stable `transaction_id` / `line_id`. Exact duplicates are skipped; conflicting identities are rejected. Purchase quantities are **units, not cases**. Uploads are processed in memory and are not retained as files. [Full import contract and correction limitations](docs/csv-imports.md).
+Daily sales exports need one row per date/SKU; transaction exports need a stable `transaction_id` (repeated lines for one SKU in a transaction are summed) or `line_id`. Dates may be `YYYY-MM-DD` or `MM/DD/YYYY`. Exact duplicates are skipped; conflicting identities are rejected. Purchase quantities are **units, not cases**. Uploads are processed in memory and are not retained as files. [Full import contract and correction limitations](docs/csv-imports.md).
 
 ## Analytics Definitions
 
