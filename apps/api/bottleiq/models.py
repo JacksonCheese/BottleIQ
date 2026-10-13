@@ -321,3 +321,18 @@ class SmartOrderAudit(Identity, Tenant, Base):
         ),
         Index("ix_smart_order_audit_order_created", "smart_order_id", "created_at"),
     )
+
+
+class ProgressBaseline(Identity, Tenant, Base):
+    """Headline numbers frozen when a store starts tracking progress."""
+
+    __tablename__ = "progress_baselines"
+    store_id: Mapped[str] = mapped_column(String(36), unique=True)
+    started_on: Mapped[date] = mapped_column(Date)
+    created_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    metrics: Mapped[dict] = mapped_column(JSON)
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["store_id", "organization_id"], ["stores.id", "stores.organization_id"]
+        ),
+    )
