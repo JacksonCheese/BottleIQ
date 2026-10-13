@@ -44,12 +44,28 @@ const manageNav = [
   { href: "/imports", name: "Update data", icon: Upload },
   { href: "/settings", name: "Settings", icon: Settings },
 ];
+// The last store picked in this browser; an ID from another account falls back to the first store.
+const STORE_KEY = "bottleiq:store";
+function rememberedStore() {
+  try {
+    return localStorage.getItem(STORE_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+function rememberStore(id: string) {
+  try {
+    localStorage.setItem(STORE_KEY, id);
+  } catch {
+    // Private browsing or blocked storage: the choice lasts until reload.
+  }
+}
 export function Workspace({ children }: { children: ReactNode }) {
   const router = useRouter(),
     pathname = usePathname();
   const [user, setUser] = useState<User>();
   const [stores, setStores] = useState<Store[]>([]);
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState(rememberedStore);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
   const [mobile, setMobile] = useState(false);
@@ -155,7 +171,10 @@ export function Workspace({ children }: { children: ReactNode }) {
             <select
               aria-label="Current store"
               value={store?.id || ""}
-              onChange={(e) => setSelected(e.target.value)}
+              onChange={(e) => {
+                setSelected(e.target.value);
+                rememberStore(e.target.value);
+              }}
             >
               {stores.map((s) => (
                 <option key={s.id} value={s.id}>
