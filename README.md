@@ -13,6 +13,7 @@ BottleIQ is an inventory intelligence MVP for independent liquor stores and smal
 - Searchable, filterable, sortable inventory, ABC classification, product detail and 90-day sales charts.
 - Explainable demand, safety stock, reorder points, days supply, margin, turnover, GMROI, and stock alerts.
 - Distributor Smart Orders with configurable demand window, target supply, service level, case rounding, editable/excluded lines, minimum-order warnings, and CSV export.
+- Printable progress report: a frozen Day 1 baseline compared with current cash in stock, dead/slow stock, and stockout risks, plus monthly revenue and estimated gross profit (year over year when 12+ months of sales exist).
 - Confirmed incoming-stock tracking and partial receiving, with expected dates, order references, and overdue-delivery holds.
 - Product/distributor configuration, including case packs and lead times.
 - Seeded synthetic demo, migrations, PostgreSQL development service, unit/integration/browser tests, and CI.

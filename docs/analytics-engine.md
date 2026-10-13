@@ -52,6 +52,21 @@ For ABC, the item that crosses a threshold remains in the earlier class; zero-to
 
 Financial impact on an alert means the product's current inventory cost, **not projected savings or lost revenue**. No ROI claim is made from synthetic data. GMROI and turnover are always labeled estimates because snapshot sampling and latest-cost COGS are approximations.
 
+## Progress report
+
+Starting tracking freezes a baseline for the store: `analyze` runs as of the chosen start date (sales before it, the latest inventory count on or before it) and stores inventory value, dead value, slow value excluding dead, stockout risks, product and missing-cost counts, and trailing 90-day revenue and estimated gross profit. The start date cannot be in the future and needs an inventory count on or before it. The baseline is never recalculated; owners/admins can delete it and start again.
+
+Current numbers use the same definitions as of today. Sales comparisons use complete days only (`[started_on, today)`) and estimated gross profit = revenue − units × each product's latest known cost; revenue from products without any cost is excluded from profit and disclosed.
+
+| Situation | Comparison |
+| --- | --- |
+| Fewer than 7 days tracked | None yet |
+| Sales history reaches one year before the start date | Totals since start vs. the same dates last year |
+| Otherwise, at least 7 days of sales before the start | Per-30-day averages since start vs. up to 90 days before (seasonality caveat shown) |
+| No sales before the start date | None; import earlier history |
+
+Monthly rows cover up to 12 calendar months fully covered by sales history, ending with month-to-date. Each month shows the same month last year only when history reaches it. The report describes change since tracking began and does not attribute it to BottleIQ.
+
 ## Manual examples in the synthetic fixture
 
 - `BTL-0001`: 4/day, 8 on hand, 4-day lead, σ=0, pack 12. Safety=0, point=16, target=100, deficit=92, cases=8, units=96, cost=$1,728 at $18/unit.

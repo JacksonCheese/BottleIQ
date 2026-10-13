@@ -15,6 +15,7 @@ import {
   Store as StoreIcon,
   Menu,
   Compass,
+  TrendingUp,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Store, User } from "@/lib/types";
@@ -37,6 +38,7 @@ const primaryNav = [
   { href: "/smart-orders", name: "Order", icon: ShoppingCart },
   { href: "/inventory", name: "Products", icon: Package },
   { href: "/alerts", name: "Alerts", icon: Bell },
+  { href: "/progress", name: "Progress", icon: TrendingUp },
 ];
 const manageNav = [
   { href: "/imports", name: "Update data", icon: Upload },

@@ -36,6 +36,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
         : message,
     );
   }
+  if (response.status === 204) return undefined as T;
   return response.json();
 }
 export const money = (n: number | null | undefined, precise = false) =>

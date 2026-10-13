@@ -97,7 +97,9 @@ def test_start_date_must_be_counted_and_not_in_the_future(db, store):
     seed(db, store, days=30)
     with pytest.raises(ValueError, match="future"):
         start_tracking(db, store, owner_id(db), TODAY + timedelta(days=1), today=TODAY)
-    with pytest.raises(ValueError, match="inventory count dated on or before"):
+    with pytest.raises(
+        ValueError, match="Import an inventory count dated on or before Aug 20, 2026"
+    ):
         start_tracking(db, store, owner_id(db), TODAY - timedelta(days=31), today=TODAY)
     start_tracking(db, store, owner_id(db), None, today=TODAY)
     with pytest.raises(TrackingExists):

@@ -72,7 +72,7 @@ def start_tracking(
     today = today or store_today(store)
     started_on = started_on or today
     if started_on > today:
-        raise ValueError("started_on: the start date cannot be in the future")
+        raise ValueError("The start date cannot be in the future.")
     counted = db.scalar(
         select(InventorySnapshot.id)
         .where(
@@ -84,8 +84,9 @@ def start_tracking(
     )
     if counted is None:
         raise ValueError(
-            f"started_on: import an inventory count dated on or before {started_on.isoformat()} "
-            "first"
+            "Import an inventory count dated on or before "
+            f"{started_on:%b} {started_on.day}, {started_on.year} "
+            "before starting from this date."
         )
     if baseline_for(db, store):
         raise TrackingExists

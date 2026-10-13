@@ -2540,3 +2540,119 @@ summary {
     transition: none !important;
   }
 }
+.progress-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.progress-start {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 440px;
+}
+.progress-start label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.progress-start input {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font: inherit;
+}
+.progress-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.progress-card {
+  padding: 18px 20px;
+}
+.progress-cards .panel,
+.progress-panels .panel {
+  margin: 0;
+}
+.progress-values {
+  display: flex;
+  gap: 24px;
+  margin: 10px 0 6px;
+}
+.progress-values small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-bottom: 3px;
+}
+.progress-values strong {
+  font-size: 20px;
+}
+.progress-change {
+  font-weight: 600;
+  font-size: 12px;
+  margin: 6px 0;
+}
+.progress-change.good {
+  color: var(--green);
+}
+.progress-change.bad {
+  color: var(--red);
+}
+.progress-change.neutral {
+  color: var(--muted);
+}
+.progress-panels {
+  display: grid;
+  gap: 20px;
+}
+.progress-panels > .notice {
+  margin: 0;
+}
+@media (max-width: 1100px) {
+  .progress-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .progress-cards {
+    grid-template-columns: 1fr;
+  }
+}
+@media print {
+  .sidebar,
+  .topbar,
+  .mobile-menu,
+  .app-footer,
+  .no-print {
+    display: none !important;
+  }
+  .workspace-main {
+    margin-left: 0;
+  }
+  .main-content {
+    padding: 0;
+    min-height: 0;
+  }
+  body {
+    background: #fff;
+  }
+  .panel {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+}
+.progress-tag {
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #eef2e8;
+  color: var(--green);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
