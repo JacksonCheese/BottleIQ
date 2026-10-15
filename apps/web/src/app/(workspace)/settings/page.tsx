@@ -152,6 +152,54 @@ export default function Page() {
           <CreateStore onCreated={refresh} />
         </div>
       )}
+      {user.role === "owner" && !user.demo && (
+        <Panel
+          title="Invite a teammate"
+          subtitle="Send a seven-day invitation to an admin or read-only viewer"
+        >
+          <form
+            className="padded"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              setBusy(true);
+              setError("");
+              setSaved("");
+              const form = event.currentTarget;
+              const values = new FormData(form);
+              try {
+                await api("/auth/invitations", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    email: values.get("email"),
+                    role: values.get("role"),
+                  }),
+                });
+                setSaved("Invitation sent. The link expires in seven days.");
+                form.reset();
+              } catch (cause) {
+                setError((cause as Error).message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <label>
+              Email
+              <input name="email" type="email" required />
+            </label>
+            <label>
+              Role
+              <select name="role">
+                <option value="viewer">Viewer · read only</option>
+                <option value="admin">Admin · can edit data and orders</option>
+              </select>
+            </label>
+            <button className="button" disabled={busy}>
+              Send invitation
+            </button>
+          </form>
+        </Panel>
+      )}
       <div className="notice">
         Demo workspace: synthetic data only. Live store data belongs in a
         separate account with demo mode disabled on the server.

@@ -1,0 +1,3 @@
+Date,Time,Time Zone,Category,Item,Qty,Price Point Name,SKU,Modifiers Applied,Gross Sales,Discounts,Net Sales,Tax,Transaction ID,Payment ID,Event Type,Location
+09/18/2025,14:30:00,Pacific,Whiskey,Example Whiskey,2,Regular,000001,,58.00,0.00,58.00,0.00,example-transaction,example-payment,Payment,Downtown
+09/18/2025,14:30:00,Pacific,Whiskey,Example Whiskey,1,Regular,000001,,29.00,0.00,29.00,0.00,example-transaction,example-payment,Payment,Downtown

@@ -15,6 +15,26 @@ class Signup(Credentials):
     organization_name: str = Field(min_length=1, max_length=160)
 
 
+class RecoveryRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetInput(BaseModel):
+    token: str = Field(min_length=32, max_length=256)
+    password: str = Field(min_length=12, max_length=128)
+
+
+class InvitationInput(BaseModel):
+    email: EmailStr
+    role: Literal["admin", "viewer"]
+
+
+class InvitationAccept(BaseModel):
+    token: str = Field(min_length=32, max_length=256)
+    name: str = Field(min_length=1, max_length=120)
+    password: str = Field(min_length=12, max_length=128)
+
+
 class StoreInput(BaseModel):
     name: str = Field(min_length=1, max_length=160)
     timezone: str = "America/Los_Angeles"
@@ -200,8 +220,18 @@ class ImportJobView(BaseModel):
     rows_rejected: int
     rows_duplicate: int
     error_summary: list[RejectedRow]
-    warnings: list[RejectedRow] = []
+    warnings: list[RejectedRow] = Field(default_factory=list)
+    coverage_start: date | None = None
+    coverage_end: date | None = None
+    reconciliation: dict = Field(default_factory=dict)
+    resolved_at: datetime | None = None
+    resolved_by_user_id: str | None = None
+    resolution_note: str | None = None
     created_at: datetime
+
+
+class ImportResolution(BaseModel):
+    note: str = Field(min_length=10, max_length=500)
 
 
 class OrderLineView(BaseModel):

@@ -71,7 +71,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
-      - run: make setup seed check-migrations
+      - run: make setup migrate check-migrations
       - run: cd apps/web && npx playwright install --with-deps chromium && npm run build
       - run: |
           cd apps/api && .venv/bin/uvicorn bottleiq.main:app --host 127.0.0.1 --port 8000 > /tmp/api.log 2>&1 &
@@ -85,6 +85,8 @@ jobs:
             cat /tmp/api.log /tmp/web.log
             exit 1
           fi
+          cd apps/web && npx playwright test -g "new owner can sign up" && cd ../..
+          make seed
           make smoke
       - uses: actions/upload-artifact@v4
         if: always()

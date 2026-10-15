@@ -90,6 +90,11 @@ export function AuthForm({ signup = false }: { signup?: boolean }) {
             {signup ? "Sign in" : "Create an account"}
           </Link>
         </p>
+        {!signup && (
+          <p>
+            <Link href="/forgot-password">Forgot your password?</Link>
+          </p>
+        )}
       </div>
     </main>
   );

@@ -40,7 +40,7 @@ const optional: Record<string, string[]> = {
     "upc",
     "vendor",
   ],
-  sales: ["unit_price", "transaction_id", "line_id"],
+  sales: ["unit_price", "transaction_id", "line_id", "event_type"],
   purchases: ["product_name", "line_id"],
 };
 function exampleCsv(kind: string) {
@@ -65,7 +65,17 @@ export default function Page() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ImportJob>();
   const [samplePreview, setSamplePreview] = useState(false);
+  const [coverageStart, setCoverageStart] = useState("");
+  const [coverageEnd, setCoverageEnd] = useState("");
+  const [sourceRows, setSourceRows] = useState("");
+  const [sourceUnits, setSourceUnits] = useState("");
+  const [sourceRevenue, setSourceRevenue] = useState("");
   const jobs = useResource<ImportJob[]>(`/imports?store_id=${store.id}`);
+  const quality = useResource<{
+    products_checked: number;
+    products_held: number;
+    reasons: Record<string, number>;
+  }>(`/imports/quality?store_id=${store.id}`);
   async function inspect(selected?: File, example = false) {
     setFile(selected);
     setSamplePreview(example);
@@ -112,6 +122,13 @@ export default function Page() {
     form.append("file", file);
     form.append("store_id", store.id);
     form.append("mapping", JSON.stringify(mapping));
+    if (kind === "sales") {
+      form.append("coverage_start", coverageStart);
+      form.append("coverage_end", coverageEnd);
+      form.append("expected_rows", sourceRows);
+      form.append("expected_units", sourceUnits);
+      form.append("expected_revenue", sourceRevenue);
+    }
     try {
       setResult(
         await api<ImportJob>(`/imports/${kind}`, {
@@ -120,6 +137,7 @@ export default function Page() {
         }),
       );
       jobs.reload();
+      quality.reload();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -218,6 +236,68 @@ export default function Page() {
                     </label>
                   ))}
                 </div>
+                {kind === "sales" && !samplePreview && (
+                  <div className="padded guidance">
+                    <h3>3. Reconcile your sales export</h3>
+                    <p>
+                      Enter the date range and totals shown by your POS before
+                      uploading. BottleIQ holds recommendations if totals differ
+                      or the last 14 completed days are not covered.
+                    </p>
+                    <label>
+                      First day covered
+                      <input
+                        aria-label="First day covered"
+                        type="date"
+                        value={coverageStart}
+                        onChange={(e) => setCoverageStart(e.target.value)}
+                        required
+                      />
+                    </label>
+                    <label>
+                      Last day covered
+                      <input
+                        aria-label="Last day covered"
+                        type="date"
+                        value={coverageEnd}
+                        onChange={(e) => setCoverageEnd(e.target.value)}
+                        required
+                      />
+                    </label>
+                    <label>
+                      Source row count
+                      <input
+                        aria-label="Source row count"
+                        type="number"
+                        min="0"
+                        value={sourceRows}
+                        onChange={(e) => setSourceRows(e.target.value)}
+                        required
+                      />
+                    </label>
+                    <label>
+                      Source units sold
+                      <input
+                        aria-label="Source units sold"
+                        type="number"
+                        value={sourceUnits}
+                        onChange={(e) => setSourceUnits(e.target.value)}
+                        required
+                      />
+                    </label>
+                    <label>
+                      Source sales revenue
+                      <input
+                        aria-label="Source sales revenue"
+                        type="number"
+                        step="0.01"
+                        value={sourceRevenue}
+                        onChange={(e) => setSourceRevenue(e.target.value)}
+                        required
+                      />
+                    </label>
+                  </div>
+                )}
                 <details>
                   <summary>Preview first {preview.length} rows</summary>
                   <div className="table-scroll">
@@ -247,7 +327,16 @@ export default function Page() {
                     busy ||
                     samplePreview ||
                     user.role === "viewer" ||
-                    fields[kind].some((f) => !mapping[f])
+                    fields[kind].some((f) => !mapping[f]) ||
+                    (kind === "sales" &&
+                      !samplePreview &&
+                      !(
+                        coverageStart &&
+                        coverageEnd &&
+                        sourceRows &&
+                        sourceUnits &&
+                        sourceRevenue
+                      ))
                   }
                   onClick={submit}
                 >
@@ -281,8 +370,35 @@ export default function Page() {
                       ? result.rows_imported
                         ? "Some rows were saved. Fix the rejected rows in your CSV, then upload the corrected file."
                         : "No rows were saved. Fix the issues below in your CSV, then upload it again."
-                      : "Your data is ready. Re-uploading the same file returns this saved result."}
+                      : result.import_type === "sales" &&
+                          result.reconciliation?.status !== "matched"
+                        ? "Rows were saved, but recommendations remain held until the declared coverage and source totals match."
+                        : "Your data is ready. Re-uploading the same file returns this saved result."}
                   </p>
+                  {result.reconciliation?.status && (
+                    <p>
+                      <strong>
+                        Reconciliation: {result.reconciliation.status}.
+                      </strong>{" "}
+                      {result.reconciliation.status !== "matched" &&
+                      result.import_type === "sales"
+                        ? "Recommendations remain on hold until the export is complete and matches the POS totals."
+                        : ""}
+                    </p>
+                  )}
+                  {result.reconciliation?.checks && (
+                    <ul>
+                      {Object.entries(result.reconciliation.checks).map(
+                        ([name, check]) => (
+                          <li key={name}>
+                            {name}: source{" "}
+                            {String(check.source ?? "not provided")} · file{" "}
+                            {String(check.imported_file)}
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  )}
                   {result.error_summary.length > 0 && (
                     <>
                       <a
@@ -358,6 +474,44 @@ export default function Page() {
         </div>
       </div>
       <Panel
+        title="Data quality and purchase holds"
+        subtitle="Current checks for this store"
+      >
+        <div className="padded">
+          {quality.error && (
+            <ErrorState message={quality.error} retry={quality.reload} />
+          )}
+          {quality.data && (
+            <>
+              <p>
+                <strong>
+                  {quality.data.products_held} of{" "}
+                  {quality.data.products_checked} products held.
+                </strong>{" "}
+                Review every reason before exporting an order.
+              </p>
+              {quality.data.products_checked === 0 ? (
+                <p>
+                  Import inventory and sales before reviewing recommendations.
+                </p>
+              ) : Object.entries(quality.data.reasons).length ? (
+                <ul>
+                  {Object.entries(quality.data.reasons).map(
+                    ([reason, count]) => (
+                      <li key={reason}>
+                        {reason}: {count} products
+                      </li>
+                    ),
+                  )}
+                </ul>
+              ) : (
+                <p>No data-quality holds are currently reported.</p>
+              )}
+            </>
+          )}
+        </div>
+      </Panel>
+      <Panel
         title="Import history"
         subtitle="The latest 100 uploads for this store"
       >
@@ -374,6 +528,8 @@ export default function Page() {
                   <th>Imported</th>
                   <th>Duplicates</th>
                   <th>Rejected</th>
+                  <th>Reconciliation</th>
+                  <th>Review</th>
                   <th>Date</th>
                 </tr>
               </thead>
@@ -398,6 +554,53 @@ export default function Page() {
                         </a>
                       ) : (
                         0
+                      )}
+                    </td>
+                    <td>{j.reconciliation?.status ?? "legacy / unverified"}</td>
+                    <td>
+                      {j.resolved_at ? (
+                        `Resolved: ${j.resolution_note}`
+                      ) : user.role === "owner" &&
+                        (j.rows_rejected > 0 ||
+                          j.warnings.length > 0 ||
+                          ["mismatch", "rejected"].includes(
+                            j.reconciliation?.status ?? "",
+                          )) ? (
+                        <details>
+                          <summary>Resolve after correction</summary>
+                          <form
+                            onSubmit={async (event) => {
+                              event.preventDefault();
+                              const form = event.currentTarget;
+                              const note = new FormData(form).get("note");
+                              try {
+                                await api(`/imports/${j.id}/resolve`, {
+                                  method: "POST",
+                                  body: JSON.stringify({ note }),
+                                });
+                                jobs.reload();
+                                quality.reload();
+                              } catch (cause) {
+                                setError((cause as Error).message);
+                              }
+                            }}
+                          >
+                            <label>
+                              Correction or review note
+                              <input
+                                name="note"
+                                required
+                                minLength={10}
+                                maxLength={500}
+                              />
+                            </label>
+                            <button className="button secondary small">
+                              Record resolution
+                            </button>
+                          </form>
+                        </details>
+                      ) : (
+                        "—"
                       )}
                     </td>
                     <td>{new Date(j.created_at).toLocaleDateString()}</td>

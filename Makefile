@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-.PHONY: setup check-node db migrate check-migrations dev api web seed samples test test-api test-web lint typecheck format build smoke verify reset-db
+.PHONY: setup check-node db migrate check-migrations check-staging prune-rate-limits dev api web seed samples test test-api test-web lint typecheck format build smoke verify reset-db
 check-node:
 	@python3 scripts/check_node.py
 
@@ -17,6 +17,12 @@ migrate:
 
 check-migrations:
 	cd apps/api && uv run python -m bottleiq.migrations
+
+check-staging:
+	uv run --project apps/api python scripts/check_staging.py
+
+prune-rate-limits:
+	cd apps/api && uv run python -m bottleiq.prune_rate_limits
 
 dev: check-node check-migrations
 	python3 scripts/dev.py

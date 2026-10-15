@@ -111,7 +111,7 @@ Daily sales exports need one row per date/SKU; transaction exports need a stable
 - **GMROI:** 90-day estimated gross profit / estimated average inventory cost; explicitly an estimate using available snapshots and latest unit cost.
 - **ABC:** descending 90-day revenue with cumulative 80% / 95% thresholds. Boundary-crossing product stays in the earlier class.
 
-Missing cost/vendor, stale inventory/sales (>7 days), insufficient sales history (<14 days), or an overdue incoming delivery hold recommendations. Received units are added to estimated on-hand stock until a newer physical inventory snapshot supersedes them; partial receipts leave the balance incoming. Invoice history is stored but does not currently replace the snapshot cost basis. Incoming stock must be entered manually; drafts do not create incoming records, and promotions are not forecast. [All definitions and assumptions](docs/analytics-engine.md).
+Missing cost/vendor, stale inventory/sales (>7 days), insufficient sales history (<14 days), unverified sales coverage for the last 14 completed days, unresolved import errors or mismatches, or an overdue incoming delivery hold recommendations. Sales coverage is an operator attestation checked against source totals; it does not prove the POS export was complete. Received units are added to estimated on-hand stock until a newer physical inventory snapshot supersedes them; partial receipts leave the balance incoming. Invoice history is stored but does not currently replace the snapshot cost basis. Incoming stock must be entered manually; drafts do not create incoming records, and promotions are not forecast. [All definitions and assumptions](docs/analytics-engine.md).
 
 ## Testing
 
@@ -160,7 +160,7 @@ Do not commit `.env`. Compose is for local development and uses a local-only dat
 
 ## Authentication
 
-The MVP implements local password auth rather than requiring a third-party key to clone and run. Argon2 hashes and random opaque server-side sessions are isolated in `auth.py`, making managed OIDC adoption straightforward. Cookies are HttpOnly/SameSite=Lax, sessions expire after 12 hours, and logout revokes them. UI and API enforce read-only viewers, but there is no role invitation/management interface. Password reset, verified email, MFA, and public signup protection beyond a process-local throttle are not shipped. [Deployment requirements](docs/security.md).
+The MVP implements local password auth rather than requiring a third-party key to clone and run. Argon2 hashes and random opaque server-side sessions are isolated in `auth.py`. Cookies are HttpOnly/SameSite=Lax, sessions expire after 12 hours, and logout or password reset revokes them. Owners can invite admins and read-only viewers by email; password recovery and invitations require SMTP. Shared per-account throttles use PostgreSQL. Verified email, MFA, staff removal, and session management are still needed for broader production use. [Deployment requirements](docs/security.md).
 
 ## Repository Structure
 
@@ -178,7 +178,7 @@ Regenerate the API snapshot with `uv run --project apps/api python scripts/expor
 
 ## Current Limitations
 
-This is a working MVP and pilot-validation foundation, not an unattended production service. Significant limitations include no self-service recovery/verified email; no durable import queue or undo; inferred coverage that cannot distinguish missing days from zero sales; no returns/shrink accounting; snapshot plus receipt estimates rather than perpetual inventory; estimated COGS/GMROI; no automatic link between order drafts and incoming records; no deployed HTTPS/backups/monitoring or independent security audit. Inventory filtering is client-side, and analytics/caches are not yet optimized for large chains.
+This is a working MVP and pilot-validation foundation, not an unattended production service. Significant limitations include no verified email or MFA; no durable import queue or undo; attested coverage that cannot independently distinguish missing days from zero sales; no return/shrink ledger; snapshot plus receipt estimates rather than perpetual inventory; estimated COGS/GMROI; no automatic link between order drafts and incoming records; no verified staging HTTPS/backups/monitoring or independent security audit. Inventory filtering is client-side, and analytics/caches are not yet optimized for large chains. [Published POS format checks](docs/pos-formats.md) are not a substitute for validating merchant exports.
 
 Current deployment and pilot-readiness assessment: [engineering report](docs/engineering-report.md).
 
