@@ -33,6 +33,7 @@ OPTIONAL = [
     "vendor",
     "transaction_id",
     "line_id",
+    "event_type",
     "product_name",
     "unit_price",
 ]
@@ -129,6 +130,8 @@ class GenericCSVImporter(BaseImporter):
                     key: raw.get(mapping.get(key, key), "").strip()
                     for key in set(FIELDS[kind] + OPTIONAL)
                 }
+                if kind == "sales" and not mapping.get("event_type") and "Event Type" in raw:
+                    row["event_type"] = raw["Event Type"].strip()
                 if any(len(value) > 2000 for value in row.values()):
                     raise ValueError(f"Row {reader.line_num}: field exceeds 2,000 characters")
                 rows.append(row)
@@ -185,7 +188,10 @@ def combine_transaction_lines(rows: list[dict[str, str]]) -> list[tuple[list[int
     entries: list[tuple[list[int], dict[str, str]]] = []
     open_lines: dict[tuple[str, str, str], int] = {}
     for index, row in enumerate(rows, start=2):
-        mergeable = bool(row["transaction_id"]) and not row["line_id"]
+        is_return = any(
+            word in row["event_type"].casefold() for word in ("return", "refund", "reversal")
+        )
+        mergeable = bool(row["transaction_id"]) and not row["line_id"] and not is_return
         key = (row["sku"], row["date"], row["transaction_id"])
         position = open_lines.get(key) if mergeable else None
         if position is not None:
@@ -243,7 +249,7 @@ def import_csv(
     if expected_revenue is not None and (
         not expected_revenue.is_finite()
         or abs(expected_revenue) > Decimal("1000000000000")
-        or expected_revenue.as_tuple().exponent < -2
+        or expected_revenue != expected_revenue.quantize(Decimal("0.01"))
     ):
         raise ValueError("Source revenue must be finite with at most 2 decimal places")
     file_hash = digest(
@@ -419,6 +425,8 @@ def import_row(
     values: dict = {"organization_id": org, "store_id": store.id, "product_id": product.id}
     model: type[Sale] | type[InventorySnapshot] | type[Purchase]
     if kind == "sales":
+        if any(word in row["event_type"].casefold() for word in ("return", "refund", "reversal")):
+            raise ValueError("event_type: refund or return requires separate reconciliation")
         day = parse_date(required(row, "date"), "date", today)
         quantity = number(row["units_sold"], "units_sold", integer=True) or Decimal(0)
         revenue = number(row["revenue"], "revenue") or Decimal(0)

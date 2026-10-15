@@ -179,6 +179,203 @@
         }
       }
     },
+    "/auth/recovery/request": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Request Recovery",
+        "description": "The same response is returned for known and unknown addresses.",
+        "operationId": "request_recovery_auth_recovery_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Request Recovery Auth Recovery Request Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/recovery/reset": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Reset Password",
+        "operationId": "reset_password_auth_recovery_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Reset Password Auth Recovery Reset Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/invitations": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "List Invitations",
+        "operationId": "list_invitations_auth_invitations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response List Invitations Auth Invitations Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Invite",
+        "operationId": "invite_auth_invitations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Invite Auth Invitations Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/invitations/accept": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Accept Invitation",
+        "operationId": "accept_invitation_auth_invitations_accept_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationAccept"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Accept Invitation Auth Invitations Accept Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/stores": {
       "get": {
         "tags": [
@@ -980,6 +1177,102 @@
         }
       }
     },
+    "/imports/quality": {
+      "get": {
+        "tags": [
+          "Imports"
+        ],
+        "summary": "Quality Report",
+        "operationId": "quality_report_imports_quality_get",
+        "parameters": [
+          {
+            "name": "store_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Store Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Quality Report Imports Quality Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/imports/{job_id}/resolve": {
+      "post": {
+        "tags": [
+          "Imports"
+        ],
+        "summary": "Resolve Import",
+        "operationId": "resolve_import_imports__job_id__resolve_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportResolution"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJobView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/imports/{job_id}/errors": {
       "get": {
         "tags": [
@@ -1736,6 +2029,67 @@
             "title": "Mapping",
             "default": "{}"
           },
+          "coverage_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Start"
+          },
+          "coverage_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage End"
+          },
+          "expected_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Rows"
+          },
+          "expected_units": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Units"
+          },
+          "expected_revenue": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Revenue"
+          },
           "file": {
             "type": "string",
             "contentMediaType": "application/octet-stream",
@@ -2002,8 +2356,70 @@
               "$ref": "#/components/schemas/RejectedRow"
             },
             "type": "array",
-            "title": "Warnings",
-            "default": []
+            "title": "Warnings"
+          },
+          "coverage_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Start"
+          },
+          "coverage_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage End"
+          },
+          "reconciliation": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Reconciliation"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By User Id"
+          },
+          "resolution_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Note"
           },
           "created_at": {
             "type": "string",
@@ -2025,6 +2441,21 @@
           "created_at"
         ],
         "title": "ImportJobView"
+      },
+      "ImportResolution": {
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "note"
+        ],
+        "title": "ImportResolution"
       },
       "IncomingInput": {
         "properties": {
@@ -2166,6 +2597,58 @@
           "status"
         ],
         "title": "IncomingView"
+      },
+      "InvitationAccept": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 32,
+            "title": "Token"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 12,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "name",
+          "password"
+        ],
+        "title": "InvitationAccept"
+      },
+      "InvitationInput": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "viewer"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "role"
+        ],
+        "title": "InvitationInput"
       },
       "Metrics": {
         "properties": {
@@ -2713,6 +3196,28 @@
         ],
         "title": "OrderView"
       },
+      "PasswordResetInput": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 32,
+            "title": "Token"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 12,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "password"
+        ],
+        "title": "PasswordResetInput"
+      },
       "ProductEdit": {
         "properties": {
           "default_vendor_id": {
@@ -3110,6 +3615,20 @@
           "recorded_by_user_id"
         ],
         "title": "ReceiptView"
+      },
+      "RecoveryRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "RecoveryRequest"
       },
       "RejectedRow": {
         "properties": {

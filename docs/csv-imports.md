@@ -17,7 +17,7 @@ Dates: `YYYY-MM-DD` or US `MM/DD/YYYY` (also `M/D/YY`); a trailing time such as 
 
 Optional inventory columns: `snapshot_at`, `category`, `brand`, `size`, `units_per_case`, `upc`, `vendor`. Omitted snapshot date defaults to today in the store's timezone. Omitted case pack defaults to 12; imported vendors default to four-day lead time. Verify these in product and distributor settings before ordering. Inventory can enrich product metadata discovered in an earlier sales import. Distributor assignment is only filled when absent; explicit reassignment is through product settings.
 
-Optional sale columns: `unit_price`, `transaction_id`, `line_id`. When `unit_price` is absent it is derived as revenue ÷ units, so transaction exports that report only line totals (such as Square's item detail CSV) import directly. Optional purchase columns: `line_id`, `product_name`. Missing products are created using organization-scoped SKUs. Leading zeros are preserved.
+Optional sale columns: `unit_price`, `transaction_id`, `line_id`, `event_type`. Square's `Event Type` header is read automatically; for another POS, map its equivalent to `event_type`. Rows marked refund, return, or reversal are rejected and hold recommendations even if their quantities are positive. Other return conventions still require operator review. When `unit_price` is absent it is derived as revenue ÷ units, so transaction exports that report only line totals (such as Square's item detail CSV) import directly. Optional purchase columns: `line_id`, `product_name`. Missing products are created using organization-scoped SKUs. Leading zeros are preserved.
 
 ## Duplicate semantics
 
@@ -46,7 +46,7 @@ curl -b cookies.txt -X POST http://127.0.0.1:8000/imports/inventory \
   -F 'file=@inventory.csv'
 ```
 
-`BaseImporter.parse` is the adapter boundary. `GenericCSVImporter` implements the current contract. [Published-format checks](pos-formats.md) cover Square and Lightspeed inventory mapping and safe rejection of Shopify POS orders. These are not automatic POS integrations or merchant-export certification.
+`BaseImporter.parse` is the adapter boundary. `GenericCSVImporter` implements the current contract. [Published-format checks](pos-formats.md) cover Square inventory and item-sales mapping, Lightspeed inventory mapping, and safe rejection of Shopify POS orders. These are not automatic POS integrations or merchant-export certification.
 
 ## Performance and concurrency
 

@@ -109,9 +109,11 @@ def resolve_import(
         raise HTTPException(404, "Import not found")
     if job.resolved_at:
         raise HTTPException(409, "This import issue has already been resolved")
-    if not job.rows_rejected and not any(
-        entry.get("level") == "warning" for entry in (job.error_summary or [])
-    ) and (job.reconciliation or {}).get("status") not in ("mismatch", "rejected"):
+    if (
+        not job.rows_rejected
+        and not any(entry.get("level") == "warning" for entry in (job.error_summary or []))
+        and (job.reconciliation or {}).get("status") not in ("mismatch", "rejected")
+    ):
         raise HTTPException(422, "This import has no recorded issue to resolve")
     later = db.scalars(
         select(ImportJob).where(

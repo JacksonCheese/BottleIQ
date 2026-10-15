@@ -40,7 +40,7 @@ const optional: Record<string, string[]> = {
     "upc",
     "vendor",
   ],
-  sales: ["unit_price", "transaction_id", "line_id"],
+  sales: ["unit_price", "transaction_id", "line_id", "event_type"],
   purchases: ["product_name", "line_id"],
 };
 function exampleCsv(kind: string) {

@@ -176,9 +176,35 @@ def test_account_throttle_persists_between_attempts(db):
 
 def test_negative_inventory_warning_holds_recommendations(db, store):
     job = import_csv(
-        db, store, "inventory",
+        db,
+        store,
+        "inventory",
         b"sku,product_name,quantity_on_hand,unit_cost,retail_price,vendor\n001,Whiskey,-3,18,29,Distributor\n",
         "negative-stock.csv",
     )
     assert any(entry.get("level") == "warning" for entry in job.error_summary)
     assert "inventory import has unresolved errors" in analyze(db, store)[0].blockers
+
+
+def test_transaction_lines_reconcile_to_source_totals(db, store):
+    today = datetime.now(ZoneInfo(store.timezone)).date()
+    day = today - timedelta(days=1)
+    content = (
+        "date,sku,product_name,units_sold,revenue,transaction_id\n"
+        f"{day},001,Whiskey,2,58,txn-1\n"
+        f"{day},001,Whiskey,1,29,txn-1\n"
+    ).encode()
+    job = import_csv(
+        db,
+        store,
+        "sales",
+        content,
+        "transaction-lines.csv",
+        coverage_start=day,
+        coverage_end=day,
+        expected_rows=2,
+        expected_units=3,
+        expected_revenue=Decimal("87"),
+    )
+    assert (job.rows_imported, job.rows_rejected) == (2, 0)
+    assert job.reconciliation["status"] == "matched"
