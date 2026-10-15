@@ -4,7 +4,7 @@
 
 Use the store's local date as `as_of`. The current, incomplete sales day is excluded. Default demand is 60 complete calendar days, configurable to 30/60/90. Build a zero-filled daily series from the store's first observed sale date to `as_of`; a short history uses only observed calendar days. Zero-sale records are accepted and help establish coverage. At least 14 calendar days are required before an order is eligible.
 
-This assumes an export covers all days in its range. Missing export days cannot be distinguished from no-sale days in V1. Stockouts can suppress observed demand; this engine does not infer lost sales. No per-SKU launch dates or promotion forecasts are available. Check coverage and recent promotions during onboarding.
+For a live store, sales imports require a declared date range and independent POS row, unit, and line-revenue totals to become `matched`. Matching ranges must cover the last 14 completed days before an order is eligible. This remains an operator attestation: a missing day inside a claimed range cannot be distinguished from a no-sale day automatically. An unresolved import rejection or mismatch holds all recommendations for that store until an owner records the correction. Returns are rejected and held for supervised reconciliation; they are not subtracted from demand. Stockouts can suppress observed demand; this engine does not infer lost sales. No per-SKU launch dates or promotion forecasts are available. Check coverage and recent promotions during onboarding.
 
 ## Demand and order calculations
 

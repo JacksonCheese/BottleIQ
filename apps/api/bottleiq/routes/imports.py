@@ -1,4 +1,6 @@
 import json
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -12,7 +14,8 @@ from bottleiq.auth import Actor, current_actor, editor, get_store
 from bottleiq.config import settings
 from bottleiq.db import get_db
 from bottleiq.models import ImportJob
-from bottleiq.schemas import ImportJobView
+from bottleiq.schemas import ImportJobView, ImportResolution
+from bottleiq.services.analytics import analyze
 from bottleiq.services.imports import FIELDS, import_csv
 
 router = APIRouter(prefix="/imports", tags=["Imports"])
@@ -41,6 +44,24 @@ def jobs(
     ]
 
 
+@router.get("/quality")
+def quality_report(
+    store_id: str, actor: Actor = Depends(current_actor), db: Session = Depends(get_db)
+) -> dict:
+    store = get_store(db, actor, store_id)
+    metrics = analyze(db, store)
+    reasons: dict[str, int] = {}
+    for metric in metrics:
+        for blocker in metric.blockers:
+            reasons[blocker] = reasons.get(blocker, 0) + 1
+    return {
+        "store_id": store.id,
+        "products_checked": len(metrics),
+        "products_held": sum(bool(metric.blockers) for metric in metrics),
+        "reasons": reasons,
+    }
+
+
 def job_dict(job: ImportJob) -> dict:
     # Warnings share the stored summary column; imported rows with notes are not rejections.
     entries = job.error_summary or []
@@ -56,12 +77,62 @@ def job_dict(job: ImportJob) -> dict:
                 "rows_imported",
                 "rows_rejected",
                 "rows_duplicate",
+                "coverage_start",
+                "coverage_end",
+                "reconciliation",
+                "resolved_at",
+                "resolved_by_user_id",
+                "resolution_note",
                 "created_at",
             )
         },
         "error_summary": [e for e in entries if e.get("level") != "warning"],
         "warnings": [e for e in entries if e.get("level") == "warning"],
     }
+
+
+@router.post("/{job_id}/resolve", response_model=ImportJobView)
+def resolve_import(
+    job_id: str,
+    data: ImportResolution,
+    actor: Actor = Depends(current_actor),
+    db: Session = Depends(get_db),
+) -> dict:
+    if actor.role != "owner":
+        raise HTTPException(403, "Only an owner can resolve an import issue")
+    job = db.scalar(
+        select(ImportJob)
+        .where(ImportJob.id == job_id, ImportJob.organization_id == actor.organization_id)
+        .with_for_update()
+    )
+    if not job:
+        raise HTTPException(404, "Import not found")
+    if job.resolved_at:
+        raise HTTPException(409, "This import issue has already been resolved")
+    if not job.rows_rejected and not any(
+        entry.get("level") == "warning" for entry in (job.error_summary or [])
+    ) and (job.reconciliation or {}).get("status") not in ("mismatch", "rejected"):
+        raise HTTPException(422, "This import has no recorded issue to resolve")
+    later = db.scalars(
+        select(ImportJob).where(
+            ImportJob.store_id == job.store_id,
+            ImportJob.organization_id == actor.organization_id,
+            ImportJob.import_type == job.import_type,
+            ImportJob.created_at > job.created_at,
+            ImportJob.status == "completed",
+        )
+    ).all()
+    if not any(
+        candidate.import_type != "sales"
+        or (candidate.reconciliation or {}).get("status") == "matched"
+        for candidate in later
+    ):
+        raise HTTPException(409, "Import a corrected, complete export before recording resolution")
+    job.resolved_at = datetime.now(UTC)
+    job.resolved_by_user_id = actor.user.id
+    job.resolution_note = data.note
+    db.commit()
+    return job_dict(job)
 
 
 @router.get("/{job_id}/errors", response_class=PlainTextResponse)
@@ -90,6 +161,11 @@ async def upload(
     kind: Literal["sales", "inventory", "purchases"],
     store_id: str = Form(...),
     mapping: str = Form("{}"),
+    coverage_start: date | None = Form(None),
+    coverage_end: date | None = Form(None),
+    expected_rows: int | None = Form(None),
+    expected_units: int | None = Form(None),
+    expected_revenue: Decimal | None = Form(None),
     file: UploadFile = File(...),
     actor: Actor = Depends(editor),
     db: Session = Depends(get_db),
@@ -108,7 +184,18 @@ async def upload(
         ):
             raise ValueError("Column mapping must map field names to CSV headers")
         job = await run_in_threadpool(
-            import_csv, db, store, kind, content, file.filename or "upload.csv", column_map
+            import_csv,
+            db,
+            store,
+            kind,
+            content,
+            file.filename or "upload.csv",
+            column_map,
+            coverage_start,
+            coverage_end,
+            expected_rows,
+            expected_units,
+            expected_revenue,
         )
         return job_dict(job)
     except ValueError as exc:

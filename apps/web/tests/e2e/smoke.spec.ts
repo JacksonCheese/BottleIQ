@@ -170,7 +170,10 @@ test("responsive dashboard and navigation stay usable", async ({ page }) => {
   }
   await page.setViewportSize({ width: 375, height: 812 });
   await page.getByRole("button", { name: "Toggle navigation" }).click();
-  await page.getByRole("link", { name: "Update data", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Store management" })
+    .getByRole("link", { name: "Update data", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Bring your store into focus." }),
   ).toBeVisible();
@@ -233,8 +236,16 @@ test("new owner can sign up, create a store, map CSV columns, and import data", 
     mimeType: "text/csv",
     buffer: Buffer.from(rows.join("\n")),
   });
+  await page.getByLabel("First day covered").fill(rows[1].slice(0, 10));
+  await page.getByLabel("Last day covered").fill(rows.at(-1)!.slice(0, 10));
+  await page.getByLabel("Source row count").fill("90");
+  await page.getByLabel("Source units sold").fill("360");
+  await page.getByLabel("Source sales revenue").fill("10440");
   await page.getByRole("button", { name: "Validate & import" }).click();
   await expect(page.getByRole("status")).toContainText("90 imported");
+  await expect(page.getByRole("status")).toContainText(
+    "Reconciliation: matched",
+  );
   await page.getByRole("button", { name: "Purchases", exact: true }).click();
   await page.getByLabel("CSV file").setInputFiles({
     name: "purchases.csv",
@@ -254,9 +265,38 @@ test("new owner can sign up, create a store, map CSV columns, and import data", 
     page.getByRole("heading", { name: "Good morning, Pilot." }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Order", exact: true }).click();
+  await expect(page.getByText("No orders to build right now.")).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Store management" })
+    .getByRole("link", { name: "Update data", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await page.getByLabel("CSV file").setInputFiles({
+    name: "corrected-inventory.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      "sku,product_name,quantity_on_hand,unit_cost,retail_price,vendor,units_per_case\n002,Bad gin,2,10,18,Test Distributor,12\n",
+    ),
+  });
+  await page.getByRole("button", { name: "Validate & import" }).click();
+  await expect(page.getByRole("status")).toContainText("1 imported");
+  const rejectedJob = page
+    .getByRole("row")
+    .filter({ hasText: "invalid-inventory.csv" });
+  await rejectedJob.getByText("Resolve after correction").click();
+  await rejectedJob
+    .getByLabel("Correction or review note")
+    .fill("Corrected malformed gin quantity in a new inventory export.");
+  await rejectedJob.getByRole("button", { name: "Record resolution" }).click();
+  await expect(rejectedJob).toContainText("Resolved:");
+  await page.getByRole("link", { name: "Order", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Create draft" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Create draft" }).click();
+  await page.getByLabel("Cases for Synthetic Test Whiskey").fill("1");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Changes saved.")).toBeVisible();
   await page.getByRole("button", { name: /Pilot Tester/ }).click();
   await page.goto("/login");
   await page.getByLabel("Email", { exact: true }).fill(email);

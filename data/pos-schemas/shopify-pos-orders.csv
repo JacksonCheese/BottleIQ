@@ -1,0 +1,3 @@
+Name,Created at,Lineitem quantity,Lineitem name,Lineitem price,Lineitem SKU,Source,Financial Status,Refunded Amount
+#1001,2026-09-18 12:00:00 -0700,2,Example Bourbon,30.00,000003,pos,paid,0.00
+,,1,Example Gin,25.00,000002,,,

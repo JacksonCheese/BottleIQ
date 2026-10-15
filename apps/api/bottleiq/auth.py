@@ -28,6 +28,10 @@ def token_digest(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+
 def login_session(db: Session, user: User, response: Response) -> None:
     token = secrets.token_urlsafe(32)
     db.add(
@@ -52,7 +56,7 @@ def login_session(db: Session, user: User, response: Response) -> None:
 def current_actor(request: Request, db: Session = Depends(get_db)) -> Actor:
     token = request.cookies.get(COOKIE)
     session = db.get(AuthSession, token_digest(token)) if token else None
-    if session is None or session.expires_at.replace(tzinfo=UTC) <= datetime.now(UTC):
+    if session is None or as_utc(session.expires_at) <= datetime.now(UTC):
         raise HTTPException(401, "Please sign in to continue")
     user = db.get(User, session.user_id)
     member = db.scalar(

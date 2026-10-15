@@ -218,10 +218,45 @@ def import_csv(
     content: bytes,
     filename: str,
     mapping: dict[str, str] | None = None,
+    coverage_start: date | None = None,
+    coverage_end: date | None = None,
+    expected_rows: int | None = None,
+    expected_units: int | None = None,
+    expected_revenue: Decimal | None = None,
 ) -> ImportJob:
     mapping = mapping or {}
     rows = GenericCSVImporter().parse(content, kind, mapping)
-    file_hash = digest([hashlib.sha256(content).hexdigest(), mapping])
+    today = datetime.now(ZoneInfo(store.timezone)).date()
+    if kind != "sales" and any(
+        value is not None
+        for value in (coverage_start, coverage_end, expected_rows, expected_units, expected_revenue)
+    ):
+        raise ValueError("Coverage and source sales totals apply only to sales imports")
+    if kind == "sales" and (coverage_start is None) != (coverage_end is None):
+        raise ValueError("Provide both the first and last day covered by the sales export")
+    if coverage_start and coverage_end and (coverage_start > coverage_end or coverage_end > today):
+        raise ValueError("Sales coverage dates must be ordered and cannot be in the future")
+    if expected_rows is not None and not 0 <= expected_rows <= 100000:
+        raise ValueError("Source row count must be between 0 and 100,000")
+    if expected_units is not None and abs(expected_units) > 1_000_000_000:
+        raise ValueError("Source units are outside the supported range")
+    if expected_revenue is not None and (
+        not expected_revenue.is_finite()
+        or abs(expected_revenue) > Decimal("1000000000000")
+        or expected_revenue.as_tuple().exponent < -2
+    ):
+        raise ValueError("Source revenue must be finite with at most 2 decimal places")
+    file_hash = digest(
+        [
+            hashlib.sha256(content).hexdigest(),
+            mapping,
+            coverage_start,
+            coverage_end,
+            expected_rows,
+            expected_units,
+            expected_revenue,
+        ]
+    )
     existing = db.scalar(
         select(ImportJob).where(
             ImportJob.store_id == store.id,
@@ -242,13 +277,17 @@ def import_csv(
         rows_rejected=0,
         rows_duplicate=0,
         error_summary=[],
+        coverage_start=coverage_start if kind == "sales" else None,
+        coverage_end=coverage_end if kind == "sales" else None,
+        reconciliation={},
     )
     db.add(job)
     db.flush()
     errors, warnings = [], []
     cache = cache_for(db, store, kind)
     imported, duplicate, rejected = 0, 0, 0
-    today = datetime.now(ZoneInfo(store.timezone)).date()
+    actual_units = 0
+    actual_revenue = Decimal(0)
     entries = (
         combine_transaction_lines(rows)
         if kind == "sales"
@@ -257,8 +296,15 @@ def import_csv(
     for indexes, row in entries:
         notes: list[str] = []
         try:
+            if kind == "sales" and coverage_start and coverage_end:
+                sold_at = parse_date(required(row, "date"), "date", today)
+                if not coverage_start <= sold_at <= coverage_end:
+                    raise ValueError("date: outside the declared export coverage")
             with db.begin_nested():
                 outcome = import_row(db, store, kind, row, today, cache, notes)
+            if kind == "sales":
+                actual_units += int(number(row["units_sold"], "units_sold", integer=True) or 0)
+                actual_revenue += number(row["revenue"], "revenue") or Decimal(0)
             if outcome:
                 imported += len(indexes)
             else:
@@ -283,6 +329,33 @@ def import_csv(
         if job.rows_imported or job.rows_duplicate
         else "rejected"
     )
+    checks = {
+        "rows": {"source": expected_rows, "imported_file": len(rows)},
+        "units": {"source": expected_units, "imported_file": actual_units},
+        "revenue": {
+            "source": str(expected_revenue) if expected_revenue is not None else None,
+            "imported_file": str(actual_revenue),
+        },
+    }
+    complete = kind != "sales" or all(
+        value is not None
+        for value in (coverage_start, coverage_end, expected_rows, expected_units, expected_revenue)
+    )
+    matches = (
+        (expected_rows is None or expected_rows == len(rows))
+        and (expected_units is None or expected_units == actual_units)
+        and (expected_revenue is None or expected_revenue == actual_revenue)
+    )
+    job.reconciliation = {
+        "status": "rejected"
+        if rejected
+        else "unverified"
+        if not complete
+        else "matched"
+        if matches
+        else "mismatch",
+        "checks": checks,
+    }
     db.commit()
     return job
 

@@ -66,6 +66,31 @@ class AuthSession(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class PasswordReset(Base):
+    __tablename__ = "password_resets"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AuthRateLimit(Base):
+    __tablename__ = "auth_rate_limits"
+    key_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    hit_count: Mapped[int] = mapped_column(Integer)
+
+
+class OrganizationInvitation(Identity, Tenant, Base):
+    __tablename__ = "organization_invitations"
+    email: Mapped[str] = mapped_column(String(254))
+    role: Mapped[str] = mapped_column(String(12))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    invited_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    __table_args__ = (CheckConstraint("role IN ('admin','viewer')"),)
+
+
 class Store(Identity, Tenant, Base):
     __tablename__ = "stores"
     name: Mapped[str] = mapped_column(String(160))
@@ -226,6 +251,12 @@ class ImportJob(Identity, Tenant, Base):
     rows_rejected: Mapped[int] = mapped_column(default=0)
     rows_duplicate: Mapped[int] = mapped_column(default=0)
     error_summary: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    coverage_start: Mapped[date | None] = mapped_column(Date)
+    coverage_end: Mapped[date | None] = mapped_column(Date)
+    reconciliation: Mapped[dict] = mapped_column(JSON, default=dict)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_by_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    resolution_note: Mapped[str | None] = mapped_column(String(500))
     __table_args__ = (
         ForeignKeyConstraint(
             ["store_id", "organization_id"], ["stores.id", "stores.organization_id"]

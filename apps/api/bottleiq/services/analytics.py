@@ -6,13 +6,16 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from bottleiq.models import (
+    ImportJob,
     IncomingStock,
     InventorySnapshot,
+    OrganizationMember,
     Product,
     ReorderRecommendation,
     Sale,
     StockReceipt,
     Store,
+    User,
     Vendor,
 )
 from bottleiq.schemas import Alert, AnalysisOptions, Metrics
@@ -42,6 +45,44 @@ def analyze(
         .order_by(Product.product_name)
     ).all()
     vendors = {v.id: v for v in db.scalars(select(Vendor).where(Vendor.organization_id == org))}
+    demo = (
+        db.scalar(
+            select(User.id)
+            .join(OrganizationMember, OrganizationMember.user_id == User.id)
+            .where(OrganizationMember.organization_id == org, User.email == "demo@bottleiq.local")
+        )
+        is not None
+    )
+    quality_blockers: list[str] = []
+    if not demo:
+        jobs = db.scalars(
+            select(ImportJob)
+            .where(ImportJob.store_id == store.id, ImportJob.organization_id == org)
+            .order_by(ImportJob.created_at.desc(), ImportJob.id.desc())
+        ).all()
+        for kind in ("sales", "inventory", "purchases"):
+            if any(
+                job.import_type == kind
+                and job.resolved_at is None
+                and (
+                    job.rows_rejected
+                    or any(entry.get("level") == "warning" for entry in (job.error_summary or []))
+                    or (job.reconciliation or {}).get("status") in ("mismatch", "rejected")
+                )
+                for job in jobs
+            ):
+                quality_blockers.append(f"{kind} import has unresolved errors")
+        covered: set[date] = set()
+        required_days = {today - timedelta(days=offset) for offset in range(1, 15)}
+        for job in jobs:
+            if job.import_type != "sales" or (job.reconciliation or {}).get("status") != "matched":
+                continue
+            if job.coverage_start and job.coverage_end:
+                covered.update(
+                    day for day in required_days if job.coverage_start <= day <= job.coverage_end
+                )
+        if required_days - covered:
+            quality_blockers.append("sales coverage unverified for the last 14 completed days")
     snapshots = db.scalars(
         select(InventorySnapshot)
         .where(
@@ -171,7 +212,7 @@ def analyze(
         )
         recent, baseline = sum(units[-7:]) / 7, sum(units[-35:-7]) / 28
         abnormal = baseline > 0 and recent >= 2 * baseline and recent - baseline >= 1
-        blockers = []
+        blockers = list(quality_blockers)
         if cost is None or cost <= 0:
             blockers.append("missing cost")
         if vendor is None:

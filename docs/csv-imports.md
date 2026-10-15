@@ -26,10 +26,12 @@ Optional sale columns: `unit_price`, `transaction_id`, `line_id`. When `unit_pri
 - Inventory identity: `(store, SKU, snapshot_date)`.
 - Purchase identity: `(store, SKU, purchase_date, vendor, invoice_number, line_id)`.
 - A content hash distinguishes exact duplicates from different values sharing an identity.
-- The file hash includes bytes and mapping. Re-uploading the same file returns the original job and its counts; it does not increment history or import again.
+- The file hash includes bytes, mapping, coverage, and source totals. Re-uploading the same file with the same declarations returns the original job and its counts; it does not increment history or import again.
 - Overlapping exports skip exact row duplicates. Conflicts are rejected without silently overwriting existing records.
 
 A malformed header, encoding, or row width rejects the file before writing. Valid-width rows are individually validated within savepoints, so bad numeric/date values reject that row while valid rows succeed. Jobs report imported, duplicate, and rejected counts, and retain every rejection's source row number and reason. No raw rejected cell values or original file contents are retained. Download the text rejection report from import history.
+
+Sales jobs also record declared first/last coverage dates and independent POS totals for row count, units, and line revenue. The reconciliation report shows the source and parsed-file values. A missing declaration is `unverified`; a difference is `mismatch`; any rejected row is `rejected`. Only `matched` ranges count toward the last 14 completed days required for purchasing. Any unresolved rejection, mismatch, or inventory warning across sales, inventory, or purchases holds the store's recommendations. An owner can record a correction/review note after a later complete export; the note, editor, and time are retained. It does not rewrite or delete bad source facts.
 
 There is no general import undo/correction workflow yet. To correct an erroneous historical record, an operator must reconcile it under a controlled database maintenance procedure. Do not change a transaction identity merely to hide a conflicting duplicate; that would double-count sales. A genuinely new inventory measurement should use its true later snapshot date.
 
@@ -44,7 +46,7 @@ curl -b cookies.txt -X POST http://127.0.0.1:8000/imports/inventory \
   -F 'file=@inventory.csv'
 ```
 
-`BaseImporter.parse` is the adapter boundary. `GenericCSVImporter` implements the current contract. Square, Clover, Lightspeed, and Korona adapters are future work, not implemented integrations.
+`BaseImporter.parse` is the adapter boundary. `GenericCSVImporter` implements the current contract. [Published-format checks](pos-formats.md) cover Square and Lightspeed inventory mapping and safe rejection of Shopify POS orders. These are not automatic POS integrations or merchant-export certification.
 
 ## Performance and concurrency
 
